@@ -6,6 +6,7 @@ import { box } from './models.js';
 import { C, mat } from './palette.js';
 import { HEAD_R, headGeometry, headMaterial } from './face.js';
 import { buildHair } from './hair.js';
+import { buildHat } from './headwear.js';
 
 const tint = (hex, amt) => { const c = new THREE.Color(hex); return amt < 0 ? c.lerp(new THREE.Color(0), -amt).getHex() : c.lerp(new THREE.Color(0xffffff), amt).getHex(); };
 function ball(parent, r, color, x, y, z, sx = 1, sy = 1, sz = 1, detail = 3) {
@@ -137,16 +138,11 @@ function buildFace(head, L) {
 
 // ---- hair + headwear --------------------------------------------------------------------------------------------
 function buildHeadwear(head, L) {
-  const k = L.headwear, col = L.headwearColor, hw = L.headW;
-  if (!k) return;
-  if (k === 'coif') { ball(head, 0.225, col, 0, 0.05, -0.08, hw, 0.9, 1.05); box(head, 0.34 * hw, 0.045, 0.06, col, 0, 0.09, 0.15, 0.02); ball(head, 0.05, col, 0, -0.17, -0.08, 1, 1, 1, 1); }
-  if (k === 'hood') { ball(head, 0.25, col, 0, 0.05, -0.1, hw, 0.95, 1.05); box(head, 0.36 * hw, 0.05, 0.06, col, 0, 0.11, 0.15, 0.02); const t = cone(head, 0.1, 0.34, col, 0, 0.02, -0.4); t.rotation.x = -Math.PI / 2 - 0.5; box(head, 0.5, 0.1, 0.12, col, 0, -0.2, -0.05, 0.04); }
-  if (k === 'kerchief') { ball(head, 0.225, col, 0, 0.05, -0.07, hw, 0.9, 1.05); box(head, 0.34 * hw, 0.05, 0.06, col, 0, 0.1, 0.14, 0.02); ball(head, 0.06, col, 0, 0.0, -0.27, 1, 1, 1, 1); for (const s of [-1, 1]) { const t = box(head, 0.05, 0.16, 0.02, col, s * 0.04, -0.17, -0.28, 0.01); t.rotation.z = s * 0.3; } }
-  if (k === 'flatcap') { ball(head, 0.225, col, 0, 0.09, -0.04, hw, 0.62, 1.0); ell(head, 0.3, 0.04, 0.17, col, 0, 0.165, 0.15); ball(head, 0.13, col, 0, 0.2, -0.04, 1.5 * hw, 0.4, 1.3, 2); }
-  if (k === 'strawhat') { const b = cyl(head, 0.44, 0.46, 0.03, 0xe3c46c, 0.1, 22); b.rotation.x = -0.05; ball(head, 0.225, 0xe3c46c, 0, 0.13, -0.01, hw, 0.85, 1.05); ring(head, 0.222, 0.022, col, 0.14, hw, 1.05); }
-  if (k === 'circlet') { const b = torus(head, 0.205, 0.014, C.gold, 0, 0.1, 0); b.rotation.x = Math.PI / 2; b.scale.set(hw, 1, 1); ball(head, 0.03, 0x4fb0e0, 0, 0.1, 0.21, 1, 1, 1, 1); }
-  if (k === 'pointed') { ball(head, 0.225, col, 0, 0.07, -0.01, hw, 0.9, 1.05); const b = cyl(head, 0.34, 0.34, 0.025, col, 0.11, 24); b.rotation.x = -0.08; const t = cone(head, 0.17, 0.52, col, 0, 0.4, -0.06, 20); t.rotation.x = -0.22; ring(head, 0.215, 0.018, C.gold, 0.14, hw, 1.04); }
-  if (k === 'bakerhat') { cyl(head, 0.2, 0.21, 0.1, col, 0.1, 18); ball(head, 0.24, col, 0, 0.32, 0, 1, 0.85, 1, 2); }
+  if (L.headwear === 'circlet') { // slim gold band with a gem
+    const b = torus(head, 0.205, 0.014, C.gold, 0, 0.1, 0); b.rotation.x = Math.PI / 2; b.scale.set(L.headW, 1, 1); ball(head, 0.03, 0x4fb0e0, 0, 0.1, 0.21, 1, 1, 1, 2);
+    return;
+  }
+  buildHat(head, L);
 }
 
 // ---- body -------------------------------------------------------------------------------------------------------

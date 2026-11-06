@@ -6,11 +6,11 @@
 import * as THREE from 'three';
 
 const TAU = Math.PI * 2, PI = Math.PI;
-const clamp = THREE.MathUtils.clamp, sstep = THREE.MathUtils.smoothstep;
+export const clamp = THREE.MathUtils.clamp, sstep = THREE.MathUtils.smoothstep;
 const tintCol = (hex, k) => new THREE.Color(hex).multiplyScalar(k);
 
 // value that depends on |azimuth| (0 = front ... pi = back), cosine-smooth between key points
-function prof(keys) {
+export function prof(keys) {
   return (az) => {
     const a = Math.abs(az);
     for (let i = 0; i < keys.length - 1; i++) {
@@ -21,22 +21,22 @@ function prof(keys) {
   };
 }
 // pointed lock tips: returns 0..1, peaks (cusps) every 2*pi/f radians
-const tips = (az, f, ph = 0) => Math.pow(1 - Math.abs(Math.sin((f * az) / 2 + ph)), 1.3);
+export const tips = (az, f, ph = 0) => Math.pow(1 - Math.abs(Math.sin((f * az) / 2 + ph)), 1.3);
 
 const mats = new Map();
-function hairMat(side = THREE.DoubleSide) {
+export function hairMat(side = THREE.DoubleSide) {
   if (!mats.has(side)) mats.set(side, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.82, metalness: 0, side }));
   return mats.get(side);
 }
 
-function finish(g, color, shadeAt) {
+export function finish(g, color, shadeAt) {
   const P = g.attributes.position, C = new Float32Array(P.count * 3), c = new THREE.Color(color), t = new THREE.Color();
   for (let i = 0; i < P.count; i++) { const k = shadeAt(i); t.copy(c).multiplyScalar(k); C[i * 3] = t.r; C[i * 3 + 1] = t.g; C[i * 3 + 2] = t.b; }
   g.setAttribute('color', new THREE.BufferAttribute(C, 3));
 }
 
 // ---- the shell ---------------------------------------------------------------------------------------------------
-function shell(o) {
+export function shell(o) {
   const { rx, ry, rz, cy = 0, yEnd, thick, el0 = 0, rows = 40, cols = 84, flare = 0, curl = 0, groove, color } = o;
   const pos = [], shade = [], idx = [];
   const elEq = PI / 2 + 0.12, yEq = cy + ry * Math.cos(elEq);
@@ -77,7 +77,7 @@ function shell(o) {
 }
 
 // ---- twisted tube (ponytail, braids, pigtails) --------------------------------------------------------------------
-function tube(pts, r0, r1, { twist = 0, rip = 0.08, color, seg = 12, N = 28 } = {}) {
+export function tube(pts, r0, r1, { twist = 0, rip = 0.08, color, seg = 12, N = 28 } = {}) {
   const curve = new THREE.CatmullRomCurve3(pts.map((p) => new THREE.Vector3(...p))), fr = curve.computeFrenetFrames(N, false);
   const pos = [], shade = [], idx = [];
   for (let i = 0; i <= N; i++) {
@@ -97,7 +97,7 @@ function tube(pts, r0, r1, { twist = 0, rip = 0.08, color, seg = 12, N = 28 } = 
 }
 
 // ---- grooved blob (buns) ---------------------------------------------------------------------------------------
-function blob(r, color, sx = 1, sy = 1, sz = 1) {
+export function blob(r, color, sx = 1, sy = 1, sz = 1) {
   const g = new THREE.SphereGeometry(1, 30, 22), P = g.attributes.position, sh = [];
   for (let i = 0; i < P.count; i++) {
     const x = P.getX(i), y = P.getY(i), z = P.getZ(i), th = Math.atan2(z, x), ph = Math.acos(clamp(y, -1, 1)), w = Math.sin(3 * th + 5 * ph);
@@ -107,7 +107,7 @@ function blob(r, color, sx = 1, sy = 1, sz = 1) {
 }
 
 // ---- styles --------------------------------------------------------------------------------------------------------
-const COVERS = new Set(['coif', 'hood', 'kerchief', 'bakerhat', 'pointed', 'strawhat', 'flatcap']);
+export const COVERS = new Set(['coif', 'hood', 'kerchief', 'bakerhat', 'pointed', 'strawhat', 'flatcap']);
 
 export function buildHairMeshes(L) {
   const { hairStyle: st, hair: c, headW: hw, headH: hh, headwear } = L;
@@ -115,8 +115,8 @@ export function buildHairMeshes(L) {
   const base = { rx: 0.205 * hw, ry: 0.205 * hh, rz: 0.205, cy: 0.0, color: c };
   const bangW = (az) => 1 - sstep(Math.abs(az), 0.85, 1.25);   // 1 over the forehead, 0 beyond the temples
   const add = (geo, x = 0, y = 0, z = 0) => out.push({ geo, pos: [x, y, z] });
-  const sh = (o) => add(shell({ ...base, ...o, thick: o.thick || ((az, u) => 0.016 + 0.012 * (1 - u)) }));
-  const hat = (fn, front = 9) => (covered ? (az) => (Math.abs(az) < 1.15 ? front : fn(az)) : fn);
+  const sh = (o) => { if (covered && !['long', 'bob', 'shaggy'].includes(st)) return; add(shell({ ...base, ...o, thick: o.thick || ((az, u) => 0.016 + 0.012 * (1 - u)) })); };
+  const hat = (fn) => (covered ? (az) => { const b = sstep(Math.abs(az), 1.0, 1.8); return 0.3 + (fn(az) - 0.3) * b; } : fn); // fade the hair out under a hat instead of a hard cut
   const withBangs = (key, amp = 0.035, f = 9) => { const p = prof(key); return (az) => p(az) - amp * bangW(az) * tips(az, f); };
   const SHORT = [[0, 0.115], [0.5, 0.105], [1.0, 0.06], [1.35, 0.0], [1.7, -0.02], [2.3, -0.07], [PI, -0.09]];
   const grooveF = (f, amp) => (az, u) => amp * Math.cos(f * az) * (1 - 0.5 * u);
@@ -140,9 +140,9 @@ export function buildHairMeshes(L) {
   }
   if (['braid', 'braids', 'pigtails', 'bun', 'twinbuns', 'topknot', 'ponytail'].includes(st)) {
     sh({ el0, yEnd: hat(withBangs([[0, 0.115], [0.5, 0.105], [1.0, 0.06], [1.35, 0.0], [1.7, 0.0], [2.3, -0.04], [PI, -0.06]], 0.03, 9)), groove: grooveF(9, 0.006) });
-    if (st === 'bun') add(blob(0.1, c), 0, 0.26, -0.05);
-    if (st === 'twinbuns') for (const s of [-1, 1]) add(blob(0.08, c), s * 0.13, 0.25, -0.03);
-    if (st === 'topknot') add(blob(0.065, c, 1, 1.15, 1), 0, 0.27, -0.03);
+    if (!covered && st === 'bun') add(blob(0.1, c), 0, 0.26, -0.05);
+    if (!covered && st === 'twinbuns') for (const s of [-1, 1]) add(blob(0.08, c), s * 0.13, 0.25, -0.03);
+    if (!covered && st === 'topknot') add(blob(0.065, c, 1, 1.15, 1), 0, 0.27, -0.03);
     if (st === 'ponytail') add(tube([[0, 0.14, -0.2], [0, 0.12, -0.31], [0, -0.04, -0.36], [0, -0.26, -0.33], [0, -0.38, -0.3]], 0.075, 0.015, { twist: 1.5, rip: 0.06, color: c }));
     if (st === 'braid') add(tube([[0, 0.0, -0.18], [0, -0.14, -0.27], [0, -0.32, -0.29], [0, -0.5, -0.29]], 0.058, 0.04, { twist: 6, rip: 0.16, color: c }));
     if (st === 'braids') for (const s of [-1, 1]) add(tube([[s * 0.17, 0.02, -0.03], [s * 0.19, -0.12, -0.04], [s * 0.185, -0.3, -0.04], [s * 0.18, -0.46, -0.04]], 0.05, 0.036, { twist: 6, rip: 0.16, color: c }));
