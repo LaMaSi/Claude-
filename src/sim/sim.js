@@ -2,6 +2,7 @@
 import { FURNITURE, NEEDS } from '../data/furniture.js';
 import { buildNav } from './nav.js';
 import { START_DATE } from '../data/family.js';
+import { STAGES } from '../data/stages.js';
 import { initLife, tick as lifeTick, endSession, preferenceWeight, decayMult, advanceDate } from './life.js';
 
 const TAU = Math.PI * 2;
@@ -29,13 +30,23 @@ export class Sim {
       const p = this.nav.nearestWalkable(f.start.x, f.start.z);
       return {
         id: f.id, name: f.name, role: f.role, age: f.age, scale: f.scale, headScale: f.headScale, look: f.look,
-        x: p.x, z: p.z, y: 0, yaw: f.start.yaw, speed: 1.5 * (0.6 + 0.4 * f.scale),
+        x: p.x, z: p.z, y: 0, yaw: f.start.yaw, speed: 1.5 * (0.6 + 0.4 * f.scale) * (STAGES[f.stage || 'adult'].speed || 0),
+        stage: f.stage || 'adult', fixed: !!STAGES[f.stage || 'adult'].fixed,
         mode: 'idle', path: [], pending: null, use: null, queued: null, slotKey: null, tween: null,
         needs: Object.fromEntries(NEEDS.map((n) => [n, rand(0.45, 0.9)])),
         pose: { kind: 'stand', anim: 'none' }, activity: '', idleTimer: rand(1, 4), useTimer: 0,
       };
     });
     this.chars.forEach((c, i) => initLife(c, family[i], this));
+    // infants cannot move: they lie in a crib (one per crib item)
+    const cribs = this.items.filter((it) => it.def === 'crib');
+    this.chars.filter((c) => c.fixed).forEach((c, i) => {
+      const cr = cribs[i] || cribs[cribs.length - 1];
+      if (!cr) return;
+      const w = toWorld(cr, 0, 0.7 * c.scale - 0.04);
+      c.cribIndex = cr.index;
+      Object.assign(c, { x: w.x, z: w.z, y: 0.35 + 0.13 * c.scale, yaw: cr.rot || 0, mode: 'fixed', pose: { kind: 'sleep', anim: 'none' }, activity: 'In the crib' });
+    });
   }
 
   char(id) { return this.chars.find((c) => c.id === id); }
@@ -48,6 +59,7 @@ export class Sim {
 
   // ---- commands --------------------------------------------------------------
   commandMove(c, x, z) {
+    if (c.fixed) return false;
     this.cancelPending(c);
     if (c.mode === 'use' || c.mode === 'enter' || c.mode === 'exit') {
       c.queued = { type: 'move', x, z };
@@ -58,6 +70,7 @@ export class Sim {
   }
 
   commandUse(c, itemIndex) {
+    if (c.fixed) return false;
     const r = this.resolveUse(c, itemIndex);
     if (!r) return false;
     if ((c.mode === 'use' || c.mode === 'enter') && c.use && c.slotKey === `${r.item.index}:${r.slotIdx}`) return true;
@@ -124,7 +137,7 @@ export class Sim {
     const p = c.pending, u = p.def.use, slot = u.slots[p.slotIdx];
     let lz = slot.z, y = u.floorY || 0;
     if (u.pose === 'sit') y = u.seatTop - 0.5 * c.scale + 0.02;
-    if (u.pose === 'sleep') { lz = -0.62 + 1.2 * c.scale; y = 0.5 + 0.13 * c.scale; }
+    if (u.pose === 'sleep') { lz = -0.62 + 1.2 * c.scale; y = (u.bedTop ?? 0.5) + 0.13 * c.scale; }
     const w = toWorld(p.item, slot.x, lz);
     c.use = { ...p, exit: p.stand }; c.lastUse = p.item.def;
     c.pending = null;
@@ -159,6 +172,11 @@ export class Sim {
 
   chooseAuto(c) {
     const night = this.hour >= 21 || this.hour < 6.5;
+    // an infant in real need: any free non-infant goes to the crib first
+    if (!c.fixed) {
+      const needy = this.chars.filter((b) => b.fixed && Math.min(...Object.values(b.needs)) < 0.35).sort((x, y) => Math.min(...Object.values(x.needs)) - Math.min(...Object.values(y.needs)));
+      for (const b of needy) { const taken = [...this.occupied.keys()].some((k) => k.startsWith(`${b.cribIndex}:`)); if (!taken && this.commandUse(c, b.cribIndex)) return; }
+    }
     const options = [];
     for (const it of this.items) {
       const def = FURNITURE[it.def];
@@ -166,6 +184,7 @@ export class Sim {
       const tdef = def.use.redirect ? FURNITURE[def.use.redirect] : def;
       if (def.use.redirect ? !this.items.some((o) => o.def === def.use.redirect && this.freeSlot(o, c) >= 0) : this.freeSlot(it, c) < 0) continue;
       let w = (0.03 + this.urgency(c, tdef) * 4) * preferenceWeight(c, tdef.tags);
+      if (it.def === 'crib') { const b = this.chars.find((x) => x.fixed && x.cribIndex === it.index); w = (0.03 + (b ? Object.values(b.needs).reduce((a, v) => a + (1 - v) ** 2, 0) * 1.2 : 0)) * preferenceWeight(c, tdef.tags); }
       if (c.lastUse === (def.use.redirect ? def.use.redirect : it.def)) w *= 0.15; // variety: don't repeat the same thing back to back
       if (it.def === 'bed') w *= night ? 3 : 0.25;
       options.push({ w, it });
@@ -193,6 +212,10 @@ export class Sim {
     for (const n of NEEDS) c.needs[n] = Math.max(0, c.needs[n] - dt * decayMult(c, n) / DECAY_SECONDS[n]);
     // company: being near another person slowly restores social
     for (const o of this.chars) if (o !== c && (o.x - c.x) ** 2 + (o.z - c.z) ** 2 < 6) { c.needs.social = Math.min(1, c.needs.social + dt * 0.012); break; }
+    if (c.mode === 'use' && c.use && c.use.item.def === 'crib') { // a carer tends the infant: feed, change, soothe
+      const baby = this.chars.find((x) => x.fixed && x.cribIndex === c.use.item.index);
+      if (baby) { const R = { hunger: 0.12, hygiene: 0.1, social: 0.08, fun: 0.05, sleep: 0.02 }; for (const n of NEEDS) baby.needs[n] = Math.min(1, baby.needs[n] + dt * R[n]); c.needs.social = Math.min(1, c.needs.social + dt * 0.02); if (c.rel[baby.id]) c.rel[baby.id].aff = Math.min(100, c.rel[baby.id].aff + dt * 0.02); }
+    }
     if (c.mode === 'use' && c.use) {
       for (const [n, w] of Object.entries(FURNITURE[c.use.item.def].needs)) c.needs[n] = Math.min(1, c.needs[n] + dt * RESTORE * w * (n === 'sleep' ? 1.1 : 1));
     }
@@ -202,10 +225,13 @@ export class Sim {
   setFlag(name, v = true) { this.flags[name] = v; }
   advanceDay() { advanceDate(this.date); }
 
+  babyContent(c) { const b = this.chars.find((x) => x.fixed && x.cribIndex === c.use.item.index); return !b || Math.min(...Object.values(b.needs)) > 0.8; }
+
   update(dt) {
     this.time += dt;
     for (const c of this.chars) {
       this.updateNeeds(c, dt);
+      if (c.fixed) continue;
       const selected = c.id === this.selectedId;
       if (c.mode === 'walk') {
         const wp = c.path[0], dx = wp.x - c.x, dz = wp.z - c.z, dist = Math.hypot(dx, dz), step = c.speed * dt;
@@ -217,7 +243,7 @@ export class Sim {
       } else if (c.mode === 'enter') {
         if (this.stepTween(c, dt)) { c.mode = 'use'; c.useTimer = c.pose.kind === 'sleep' ? 60 : 30; }
       } else if (c.mode === 'use') {
-        if (!selected) { c.useTimer -= dt; if (c.useTimer <= 0 || sat(c, FURNITURE[c.use.item.def])) this.beginExit(c); }
+        if (!selected) { c.useTimer -= dt; if (c.useTimer <= 0 || (c.use.item.def === 'crib' ? this.babyContent(c) : sat(c, FURNITURE[c.use.item.def]))) this.beginExit(c); }
       } else if (c.mode === 'exit') {
         if (this.stepTween(c, dt)) {
           c.mode = 'idle'; c.use = null; c.idleTimer = rand(1, 3);

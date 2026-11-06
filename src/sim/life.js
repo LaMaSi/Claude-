@@ -2,12 +2,13 @@
 // Pure logic (no rendering). sim.js calls these hooks; ui reads the resulting fields.
 import { TRAITS, SKILLS, WISHES } from '../data/traits.js';
 import { FURNITURE } from '../data/furniture.js';
+import { STAGES } from '../data/stages.js';
 
 const SEASONS = ['Spring', 'Summer', 'Autumn', 'Winter'];
 export const dateText = (d) => `${SEASONS[d.season]} ${d.year}`;
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const prod = (c, fn) => c.traits.reduce((m, t) => m * (fn(TRAITS[t]) ?? 1), 1);
-export const decayMult = (c, need) => prod(c, (t) => t.decay?.[need]);
+export const decayMult = (c, need) => prod(c, (t) => t.decay?.[need]) * (STAGES[c.stage]?.decay?.[need] ?? 1);
 const skillGain = (c) => prod(c, (t) => t.skillGain);
 const relGain = (c) => prod(c, (t) => t.relGain);
 const NEED_OF_TAG = { music: 'fun', reading: 'fun', tales: 'fun', cooking: 'hunger', eating: 'hunger', gardening: 'fun', bathing: 'hygiene', sleeping: 'sleep', resting: 'sleep', together: 'social', socializing: 'social' };
@@ -21,8 +22,9 @@ export function initLife(c, def, sim) {
   c.goals = def.goals.map((g) => ({ ...g, state: 'active', steps: g.steps.map((s) => ({ ...s, done: false })) }));
   c.history = def.history.map((h) => ({ ...h }));
   c.stats = { tags: {} }; c.wishes = []; c.mood = 0.7; c.boost = 0; c.togetherT = 0; c.session = null; c.goalTimer = 0;
-  while (c.wishes.length < 3) addWish(c, sim);
+  while (c.wishes.length < wishCount(c)) addWish(c, sim);
 }
+const wishCount = (c) => (c.stage === 'infant' ? 0 : 3);
 
 // ---- preferences ----------------------------------------------------------------------------------------------
 /** Multiplier on how much this person favours an activity (liked x2.2, disliked x0.3, trait weights). */
@@ -122,7 +124,7 @@ export function tick(c, dt, sim) {
   c.mood = clamp(avg * 0.62 + worst * 0.13 + 0.05 + c.boost * 0.2, 0, 1);
   // wishes refresh
   for (let i = c.wishes.length - 1; i >= 0; i--) if (c.wishes[i].done && sim.time - c.wishes[i].doneAt > 7) c.wishes.splice(i, 1);
-  while (c.wishes.length < 3 && sim.time % 1 < dt) { addWish(c, sim); break; }
+  while (c.wishes.length < wishCount(c) && sim.time % 1 < dt) { addWish(c, sim); break; }
   c.goalTimer -= dt; if (c.goalTimer <= 0) { c.goalTimer = 1; checkGoals(c, sim); }
 }
 

@@ -18,3 +18,5 @@ Characters have a `species` field; add a builder to `SPECIES` in `src/render/peo
 
 Showcase: `showcase.html` (deployed next to the game) shows 20 hand-designed human variants. Looks are data in
 `src/data/variants.js`; the parametric face/hair/outfit system lives in `src/render/people.js`.
+
+Creator: `creator.html` (first visit opens it). Spec and status: `docs/GAME_FLOW.md`. Pure creator logic is in `src/creator/generate.js`.

@@ -1,6 +1,6 @@
 # Little Lives: game flow and character creation (spec draft)
 
-Status: **draft for review, nothing here is built yet.** Items marked **(assumed)** are my gap-fills, not your decisions.
+Status: **the character creator is built (first version).** Items marked **(assumed)** are my gap-fills, not your decisions. See "What is built" at the end.
 
 ## Decisions so far
 | Topic | Decision |
@@ -14,6 +14,9 @@ Status: **draft for review, nothing here is built yet.** Items marked **(assumed
 | Ageing | **Accelerated life**: a full life in roughly 10-15 hours of play. The player can also trigger an event to force someone to age up (or down, e.g. a youth potion). |
 | Traits | Up to **3** at creation (free pick; contradictory pairs blocked). More are earned later from life-changing events. |
 | Creator scope | Name, life stage, looks, traits, likes/dislikes, a starting skill, backstory and starting life goal. **Every field can be chosen or randomised.** |
+| Children alone | Allowed (only infants-only is blocked). **Children do basic chores**: they can use the pantry, hearth and other furniture and look after an infant. |
+| Age events | Forcing someone to age up or down (e.g. a youth potion) happens through **rare items and rituals** found, crafted or earned through story events. |
+| Build order | Creator first, then the menu / world-select skeleton, then deeper life-stage rules. |
 | Difficulty | Chosen per world: **Cozy** (reload allowed, gentler hunger and threats), **Standard**, **Hardcore** (autosave only, no undo). |
 | World content (v1) | One hand-made village (the current cottage and garden). **Vision:** randomly generated starting worlds with different resources and levels of civilisation. |
 
@@ -66,5 +69,17 @@ Earned traits (from life events) bypass the creation limit but still respect con
 ## World generation (vision, not v1)
 Starting worlds differ in **resources** (fertile, forest, mountain, coast, ruins) and **civilisation level** (lone homestead, hamlet, village, market town). These set food supply, neighbours, jobs, dangers and who can visit, and therefore which stories are likely. v1 keeps the single authored village, but the world object already carries `worldType` and `seed` so generation can be added without breaking saves.
 
+## What is built (creator v1)
+- `creator.html`: roster at the bottom (up to 8), a live 3D preview (drag to turn, 🔍 face close-up), tabs **Who · Look · Traits · Likes · Story · Bonds**, a 🎲 and 🔒 on every field, "Random household", an "Eastwood family" shortcut, a live validation strip, and a Start sheet (world name + Cozy / Standard / Hardcore).
+- Rules enforced: at least one person, at most 8, **not infants-only**, at most 2 infants (two cribs), unique names, at most 3 traits, no conflicting traits. Warnings: no grown-ups; more people than sleeping places.
+- A created household is saved as a world (`localStorage`, one slot for now) and the game loads it. First visit goes to the creator; the options menu has "New household…".
+- Life stages (`src/data/stages.js`): infants lie in a crib and cannot act; free carers tend an infant whose needs run low. Children are smaller and slower; seniors are slower and tire much faster.
+- The home adapts: cribs for infants, straw pallets for sleepers beyond the bed's two places (as many as fit without blocking anything).
+- Everything the creator offers or generates is data (`src/data/creator.js`, traits, goals, names, backstory pieces) and every random function is pure, so it is covered by a 300-household automated test.
+
+## Not built yet
+Main menu and world select (only one save slot), ageing over time, death and game over, difficulty effects, carrying an infant, earned traits, relation changes by events, random starting worlds.
+
 ## Open points
-See the questions raised alongside this document.
+1. **Home capacity.** The one-room cottage fits about 4 sleepers. Households of 5-8 get a warning and some members sleep poorly. Options: bigger homes for bigger households (recommended), cap households at 5, or accept the crowding.
+2. **Infants** stay in the crib. "Carried by someone" is not built.

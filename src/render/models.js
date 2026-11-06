@@ -282,3 +282,21 @@ export function lantern(scale = 1) {
   g.scale.setScalar(scale);
   return g;
 }
+
+// ---- household extras: crib for infants, straw pallet for extra sleepers --------------------------------------------
+export function crib(g = new THREE.Group()) {
+  box(g, 0.74, 0.1, 1.14, C.oakDark, 0, 0.14, 0, 0.03);                       // base
+  box(g, 0.64, 0.12, 1.02, C.linen, 0, 0.24, 0, 0.05);                        // mattress (top ~0.36)
+  box(g, 0.66, 0.05, 0.6, C.woolOchre, 0, 0.34, 0.18, 0.02);                  // blanket
+  for (const sx of [-1, 1]) for (const sz of [-1, 1]) box(g, 0.06, 0.62, 0.06, C.oak, sx * 0.34, 0, sz * 0.54, 0.02);
+  for (const sx of [-1, 1]) { box(g, 0.04, 0.05, 1.08, C.oak, sx * 0.34, 0.5, 0, 0.015); box(g, 0.04, 0.05, 1.08, C.oak, sx * 0.34, 0.22, 0, 0.015); for (let i = 0; i < 7; i++) box(g, 0.025, 0.3, 0.025, C.oakLight, sx * 0.34, 0.24, -0.45 + i * 0.15, 0.008); }
+  box(g, 0.7, 0.55, 0.05, C.oak, 0, 0.12, -0.55, 0.02);                       // headboard
+  box(g, 0.7, 0.4, 0.04, C.oak, 0, 0.12, 0.55, 0.02);
+  return g;
+}
+export function pallet(g = new THREE.Group()) {
+  box(g, 0.7, 0.1, 1.9, 0xd9b86a, 0, 0, 0, 0.05);                              // straw tick
+  box(g, 0.64, 0.05, 1.1, C.wool, 0, 0.1, 0.35, 0.03);                         // blanket
+  box(g, 0.6, 0.05, 0.3, C.linen, 0, 0.1, -0.65, 0.03);                        // pillow
+  return g;
+}

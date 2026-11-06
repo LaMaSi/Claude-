@@ -4,7 +4,7 @@ export const TAGS = {
   music: { icon: '🎵', label: 'Music' }, reading: { icon: '📖', label: 'Reading' }, tales: { icon: '⚔️', label: 'Hero tales' },
   cooking: { icon: '🍲', label: 'Cooking' }, eating: { icon: '🍞', label: 'Hearty meals' }, gardening: { icon: '🌿', label: 'Gardening' },
   socializing: { icon: '🗣️', label: 'Company' }, resting: { icon: '🛋️', label: 'Lazing about' }, bathing: { icon: '🛁', label: 'Bathing' },
-  sleeping: { icon: '🌙', label: 'Sleeping in' },
+  sleeping: { icon: '🌙', label: 'Sleeping in' }, caring: { icon: '🍼', label: 'Caring for little ones' },
 };
 
 // effects: decay (multiplier on need drain), skillGain, relGain, weights (how much they favour an activity tag)
@@ -16,7 +16,7 @@ export const TRAITS = {
   curious: { icon: '🔍', name: 'Curious', desc: 'Bored easily; devours books and tales.', decay: { fun: 1.2 }, skillGain: 1.1, weights: { reading: 1.4, tales: 1.3 } },
   dreamer: { icon: '☁️', name: 'Dreamer', desc: 'Drifts off into music and daydreams.', decay: { fun: 1.15 }, weights: { music: 1.3, resting: 1.2 } },
   lazy: { icon: '😴', name: 'Lazy', desc: 'Sleeps in and loves a soft seat.', decay: { sleep: 1.3 }, weights: { resting: 1.5, sleeping: 1.3 } },
-  kind: { icon: '💛', name: 'Kind-hearted', desc: 'Warms to people quickly.', relGain: 1.3 },
+  kind: { icon: '💛', name: 'Kind-hearted', desc: 'Warms to people quickly and gladly tends the little ones.', relGain: 1.3, weights: { caring: 1.6 } },
   adventurous: { icon: '🧭', name: 'Adventurous', desc: 'Restless; hates sitting still.', decay: { fun: 1.3 }, weights: { resting: 0.6, tales: 1.4 } },
   tidy: { icon: '🧼', name: 'Tidy', desc: 'Cannot stand being dirty.', decay: { hygiene: 1.4 }, weights: { bathing: 1.5 } },
   practical: { icon: '🛠️', name: 'Practical', desc: 'Learns useful skills; favours homely chores.', skillGain: 1.15, weights: { gardening: 1.2, cooking: 1.2 } },

@@ -31,6 +31,11 @@ export const FURNITURE = {
     use: { activity: 'Reading', pose: 'stand', anim: 'forward', slots: [{ x: 0, z: 0.5 }], approach: [0, 0.9], face: PI } },
   chest: { name: 'Chest', footprint: [1.0, 0.55], needs: {} },
   barrel: { name: 'Barrel', footprint: [0.65, 0.65], needs: {} },
+  // Caring for the infant in the crib: the carer feeds, changes and soothes it (sim.js restores the INFANT's needs).
+  crib: { name: 'Crib', footprint: [0.75, 1.15], tags: ['caring'], needs: {},
+    use: { activity: 'Caring for the baby', pose: 'stand', anim: 'forward', slots: [{ x: 0, z: 0.85 }], approach: [0, 1.2], face: Math.PI } },
+  pallet: { name: 'Straw pallet', footprint: [0.7, 1.9], tags: ['sleeping'], needs: { sleep: 0.85 },
+    use: { activity: 'Sleeping on a pallet', pose: 'sleep', bedTop: 0.14, slots: [{ x: 0, z: 0 }], approach: [0.8, 0.3], face: 0 } },
   rug: { name: 'Woven rug', footprint: [2.4, 2.4], needs: {}, floorDecor: true },
   banner: { name: 'Banner', footprint: [0.9, 0.05], needs: {}, wallMounted: true },
 };

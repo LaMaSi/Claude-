@@ -1,6 +1,5 @@
 import * as THREE from 'three';
-import { startHouse } from './data/startHouse.js';
-import { FAMILY } from './data/family.js';
+import { currentSession, clearWorld } from './session.js';
 import { Sim } from './sim/sim.js';
 import { buildWorld } from './render/world.js';
 import { createLighting } from './render/daynight.js';
@@ -19,9 +18,10 @@ renderer.toneMapping = THREE.ACESFilmicToneMapping;
 document.body.prepend(renderer.domElement);
 
 const scene = new THREE.Scene();
-const world = buildWorld(scene, startHouse);
+const session = currentSession(), HOUSE = session.house;
+const world = buildWorld(scene, HOUSE);
 const updateLighting = createLighting(scene, renderer);
-const sim = new Sim(startHouse, FAMILY);
+const sim = new Sim(HOUSE, session.household);
 const view = createCharactersView(scene, sim);
 
 const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 200);
@@ -61,7 +61,7 @@ function onTap(cx, cy) {
   if (!sel) return;
   // 2) furniture
   raycaster.setFromCamera({ x: nx, y: ny }, camera);
-  const pickable = world.furniture.filter((g) => { const d = startHouse.items[g.userData.itemIndex].def; return !['rug', 'painting'].includes(d); });
+  const pickable = world.furniture.filter((g) => { const d = HOUSE.items[g.userData.itemIndex].def; return !['rug', 'painting'].includes(d); });
   const hits = raycaster.intersectObjects(pickable, true);
   if (hits.length) {
     let o = hits[0].object; while (o && o.userData.itemIndex === undefined) o = o.parent;
@@ -79,7 +79,7 @@ function onTap(cx, cy) {
   }
 }
 const rig = createCameraRig(camera, renderer.domElement, BASE, { onTap });
-select('sam', false);
+select(session.household[0].id, false);
 
 const UI_TOP = 52, UI_BOTTOM = 112; // px reserved for the clock and the (closed) dock
 const dock = document.getElementById('dock');
@@ -154,4 +154,5 @@ pixel.resize(window.innerWidth, window.innerHeight); syncOptions();
 optBtn.addEventListener('click', () => { const o = optPop.classList.toggle('open'); optBtn.classList.toggle('open', o); });
 pxSw.addEventListener('click', () => { pixel.enabled = !pixel.enabled; store.set('ll.px', pixel.enabled ? '1' : '0'); syncOptions(); });
 pxSizes.addEventListener('click', (e) => { const v = +e.target.dataset?.s; if (!v) return; pixel.size = v; store.set('ll.pxsize', String(v)); pixel.resize(window.innerWidth, window.innerHeight); syncOptions(); });
+document.getElementById('newhh')?.addEventListener('click', () => { if (confirm('Start a new household? The current world will be replaced.')) { clearWorld(); location.href = 'creator.html'; } });
 window.__ready = true; window.__sim = sim; window.__rig = rig; window.__select = select;
