@@ -97,7 +97,7 @@ function buildFace(head, L) {
   const R = HEAD_R, zAt = (x, y) => Math.sqrt(Math.max(0.0004, R * R - (x / hw) ** 2 - (y / hh) ** 2));
   const put = (m, x, y, dz = 0.004) => { m.position.set(x, y, zAt(x, y) + dz); m.rotation.y = Math.asin(THREE.MathUtils.clamp(x / (R * hw), -0.9, 0.9)); return m; };
   const ink = C.black;
-  const skull = new THREE.Mesh(headGeometry(L), headMaterial(L)); skull.castShadow = true; skull.receiveShadow = true; head.add(skull);
+  const skull = new THREE.Mesh(headGeometry(L), headMaterial(L)); skull.castShadow = true; skull.receiveShadow = false; /* the face never receives shadows: a nose must not cast a frown */ head.add(skull);
   head.userData.skull = skull; head.userData.look = L; // so the animation layer can swap expressions
 
   // ears: a flattened shell with a darker inner hollow, set just behind the centre line of the head
@@ -115,8 +115,8 @@ function buildFace(head, L) {
   // nose: soft ellipsoids (the 'button' nose also has painted shading in the face texture)
   const nz = zAt(0, -0.04) - 0.012, nc = tint(skin, -0.05);
   const nose = (w, h, d, y, tilt = 0, tip = 0) => {
-    const m = ell(head, w, h, d, nc, 0, y, nz + d * 0.3, 16); m.rotation.x = tilt;
-    if (tip) ell(head, w * 0.9, tip, d * 0.8, nc, 0, y - h * 0.42, nz + d * 0.62, 14);
+    const m = ell(head, w, h, d, nc, 0, y, nz + d * 0.3, 16); m.rotation.x = tilt; m.castShadow = false;
+    if (tip) ell(head, w * 0.9, tip, d * 0.8, nc, 0, y - h * 0.42, nz + d * 0.62, 14).castShadow = false;
   };
   if (L.nose === 'button') nose(0.05, 0.044, 0.046, -0.042);
   if (L.nose === 'big') nose(0.085, 0.07, 0.07, -0.046);
