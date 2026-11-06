@@ -28,6 +28,15 @@ function ring(parent, r, tube, color, y, sx = 1, sz = 0.8) {
   const m = new THREE.Mesh(new THREE.TorusGeometry(r, tube, 8, 22), smooth(color));
   m.rotation.x = Math.PI / 2; m.scale.set(sx, sz, 1); m.position.y = y; m.castShadow = true; parent.add(m); return m;
 }
+// One continuous torso: neck base -> sloped shoulders -> chest -> waist (lathe from a smooth profile curve, depth-squashed).
+const TORSO = [[0, 1.045], [0.07, 1.04], [0.125, 1.012], [0.185, 0.968], [0.232, 0.92], [0.248, 0.86], [0.232, 0.76], [0.205, 0.62], [0.2, 0.5], [0.21, 0.4], [0, 0.35]];
+const VEST = [[0.262, 0.87], [0.256, 0.8], [0.244, 0.74], [0.219, 0.62], [0.213, 0.5], [0.224, 0.4], [0, 0.35]]; // open-topped shell just outside the torso
+const torsoGeo = new Map();
+function torso(parent, g, color, pts = TORSO) {
+  let geo = torsoGeo.get(pts);
+  if (!geo) { geo = new THREE.LatheGeometry(new THREE.SplineCurve(pts.map(([r, y]) => new THREE.Vector2(r, y))).getPoints(28), 28); torsoGeo.set(pts, geo); }
+  const m = new THREE.Mesh(geo, smooth(color)); m.scale.set(g, 1, 0.6); m.castShadow = m.receiveShadow = true; parent.add(m); return m;
+}
 function cyl(parent, rt, rb, h, color, y, seg = 16) {
   const m = new THREE.Mesh(new THREE.CylinderGeometry(rt, rb, h, seg), smooth(color));
   m.position.y = y + h / 2; m.castShadow = true; m.receiveShadow = true;
@@ -116,7 +125,10 @@ function buildHair(head, L) {
   if (st === 'topknot') { cap(); fringe(); ball(head, 0.07, c, 0, 0.27, -0.03); ring(head, 0.06, 0.012, C.wool, 0.22, 1, 1).position.z = -0.03; }
   if (st === 'ponytail') { cap(); fringe(); ball(head, 0.08, c, 0, 0.12, -0.24); const t = ell(head, 0.1, 0.36, 0.1, c, 0, -0.1, -0.3); t.rotation.x = -0.2; }
   if (st === 'shaggy') { cap(); fringe(0.34, 0.1); ell(head, 0.44 * hw, 0.36, 0.2, c, 0, -0.08, -0.12); for (const s of [-1, 1]) ell(head, 0.1, 0.26, 0.2, c, s * 0.19 * hw, -0.04, 0.0); }
-  if (st === 'tonsure') { const g = new THREE.SphereGeometry(0.212, 14, 6, Math.PI * 0.85, Math.PI * 1.3, Math.PI * 0.4, Math.PI * 0.26); const m = new THREE.Mesh(g, mat(c, { side: THREE.DoubleSide })); m.scale.set(hw, 1, 1.04); m.position.y = 0.0; m.castShadow = true; head.add(m); ell(head, 0.4 * hw, 0.12, 0.12, c, 0, 0.0, -0.15); }
+  if (st === 'tonsure') { // hair ring open at the front so the brow stays clear
+    const g2 = new THREE.TorusGeometry(0.19, 0.04, 8, 24, Math.PI * 1.45); g2.rotateZ(Math.PI * 0.775);
+    const t = new THREE.Mesh(g2, smooth(c)); t.rotation.x = Math.PI / 2; t.scale.set(hw, 1.03, 1); t.position.y = 0.03; t.castShadow = true; head.add(t);
+    ell(head, 0.4 * hw, 0.14, 0.12, c, 0, 0.02, -0.15); }
   if (st === 'bald') { for (const s of [-1, 1]) ball(head, 0.06, c, s * 0.18 * hw, 0.0, -0.04, 0.8, 1.2, 1, 1); }
   if (st === 'receding') { ell(head, 0.42 * hw, 0.26, 0.14, c, 0, 0.04, -0.14); for (const s of [-1, 1]) ball(head, 0.08, c, s * 0.18 * hw, 0.05, -0.04, 0.8, 1.3, 1, 1); ball(head, 0.1, c, 0, 0.14, -0.14, 1.3, 0.7, 0.8, 1); }
 }
@@ -154,11 +166,11 @@ function buildHuman({ look, scale = 1, headScale = 1 }) {
   }
 
   const body = new THREE.Group(); pivot.add(body); parts.body = body;
-  const upper = (c, w = 0.44, y = 0.68, h = 0.62) => ell(body, w * g, h, 0.27, c, 0, y, 0);
-  const yoke = (c) => { const m = caps(body, 0.075, 0.3 * g + 0.15, c, 0, 0.935, 0); m.rotation.z = Math.PI / 2; m.scale.x = 0.9; return m; };
+  const upper = (c) => torso(body, g, c);
+  const yoke = () => {};
   const skirt = (c, rt, rb, h, y) => { const m = cyl(body, rt * g, rb * g, h, c, y); m.scale.z = 0.82; return m; };
   const belt = (c, y = 0.53) => ring(body, 0.215 * g, 0.032, c, y, 1, 0.78);
-  const collar = (c) => ring(body, 0.085, 0.026, c, 0.985, 1, 1);
+  const collar = (c) => ring(body, 0.08, 0.024, c, 1.0, 1, 1);
   let sleeve = 'long', sleeveW = 0.1, sleeveC = shirt;
   if (outfit === 'gown') {
     upper(shirt); yoke(shirt); skirt(shirt, 0.19, 0.3, 0.7, 0.13);
@@ -168,23 +180,22 @@ function buildHuman({ look, scale = 1, headScale = 1 }) {
     upper(shirt); yoke(shirt); skirt(shirt, 0.19, 0.28, 0.4, 0.28);
     box(body, 0.3 * g, 0.42, 0.06, C.cream, 0, 0.1, 0.2, 0.028); belt(C.leather, 0.55); collar(C.cream);
   } else if (outfit === 'robe') {
-    skirt(shirt, 0.2, 0.34, 1.0, 0.06); upper(shirt, 0.46, 0.76, 0.5); yoke(shirt);
-    ring(body, 0.25 * g, 0.03, C.cream, 0.52, 1, 0.82); ring(body, 0.1, 0.03, tint(shirt, -0.2), 0.99, 1.1, 1.1);
+    skirt(shirt, 0.19, 0.34, 0.8, 0.06); upper(shirt);
+    ring(body, 0.23 * g, 0.03, C.cream, 0.52, 1, 0.82); ring(body, 0.09, 0.03, tint(shirt, -0.2), 1.0, 1.1, 1.1);
     sleeve = 'wide'; sleeveW = 0.16;
   } else if (outfit === 'smith') {
-    upper(shirt, 0.46); yoke(shirt); skirt(shirt, 0.2, 0.25, 0.34, 0.24);
-    box(body, 0.34 * g, 0.7, 0.06, C.leather, 0, 0.1, 0.16, 0.028); ell(body, 0.34 * g, 0.22, 0.06, C.leather, 0, 0.9, 0.12);
-    for (const s of [-1, 1]) ell(body, 0.06, 0.4, 0.05, C.leather, s * 0.13 * g, 1.03, 0.0);
+    upper(shirt); skirt(shirt, 0.2, 0.25, 0.34, 0.24);
+    box(body, 0.34 * g, 0.7, 0.06, C.leather, 0, 0.1, 0.16, 0.028); box(body, 0.27 * g, 0.24, 0.05, C.leather, 0, 0.66, 0.15, 0.02);
     sleeve = 'rolled';
   } else if (outfit === 'jerkin') {
-    upper(C.cream); yoke(C.cream); skirt(C.cream, 0.2, 0.25, 0.34, 0.24);
-    ell(body, 0.47 * g, 0.56, 0.285, L.trim, 0, 0.68, 0);
+    upper(C.cream); skirt(C.cream, 0.2, 0.25, 0.34, 0.24);
+    torso(body, g, L.trim, VEST).scale.z = 0.64;
     for (let i = 0; i < 4; i++) box(body, 0.1, 0.012, 0.05, C.leather, 0, 0.58 + i * 0.1, 0.14, 0.003);
     belt(C.leather); sleeveC = C.cream;
   } else if (outfit === 'noble') {
     upper(shirt); yoke(shirt); skirt(shirt, 0.2, 0.29, 0.42, 0.2);
-    ring(body, 0.29 * g, 0.032, L.trim, 0.22, 1, 0.82); ring(body, 0.09, 0.03, L.trim, 0.99, 1, 1);
-    const sash = ell(body, 0.1, 0.78, 0.29, L.trim, 0, 0.7, 0); sash.rotation.z = 0.7;
+    ring(body, 0.29 * g, 0.032, L.trim, 0.22, 1, 0.82); ring(body, 0.085, 0.028, L.trim, 1.0, 1, 1);
+    const sash = ell(body, 0.09, 0.78, 0.3, L.trim, 0, 0.7, 0.0); sash.rotation.z = 0.62;
     belt(C.gold, 0.5);
   } else { // tunic
     upper(shirt); yoke(shirt); skirt(shirt, 0.2, 0.25, 0.34, 0.24);
@@ -193,12 +204,12 @@ function buildHuman({ look, scale = 1, headScale = 1 }) {
   }
   if (L.cloak != null) {
     const cl = ell(body, 0.56 * g, 1.0, 0.1, L.cloak, 0, 0.58, -0.17); cl.rotation.x = 0.05;
-    ell(body, 0.54 * g, 0.2, 0.3, L.cloak, 0, 0.95, -0.04); ball(body, 0.035, C.gold, 0, 0.98, 0.15, 1, 1, 1, 2);
+    ell(body, 0.5 * g, 0.16, 0.28, L.cloak, 0, 0.95, -0.05); ball(body, 0.035, C.gold, 0, 0.98, 0.15, 1, 1, 1, 2);
   }
 
   for (const [name, sx] of [['armL', -1], ['armR', 1]]) {
-    const arm = new THREE.Group(); arm.position.set(sx * 0.26 * g, 0.935, 0); body.add(arm);
-    if (sleeve === 'rolled') { caps(arm, 0.07, 0.24, sleeveC, 0, -0.14, 0); caps(arm, 0.05, 0.3, skin, 0, -0.34, 0); }
+    const arm = new THREE.Group(); arm.position.set(sx * 0.235 * g, 0.925, 0); body.add(arm); ball(arm, 0.072, sleeve === 'rolled' ? shirt : sleeveC, 0, -0.01, 0, 1, 1, 1, 2);
+    if (sleeve === 'rolled') { caps(arm, 0.066, 0.26, sleeveC, 0, -0.14, 0); caps(arm, 0.05, 0.3, skin, 0, -0.34, 0); }
     else if (sleeve === 'wide') { const w = cyl(arm, 0.07, sleeveW * 0.62, 0.38, sleeveC, -0.42); w.scale.z = 0.8; ball(arm, 0.075, sleeveC, 0, -0.03, 0, 1, 1, 1, 2); }
     else { caps(arm, 0.062, 0.4, sleeveC, 0, -0.2, 0); ring(arm, 0.056, 0.014, C.cream, -0.37, 1, 1); }
     ball(arm, 0.055, skin, 0, -0.45, 0, 1, 1, 1, 2);
