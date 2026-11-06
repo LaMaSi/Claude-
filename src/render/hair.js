@@ -36,7 +36,7 @@ export function finish(g, color, shadeAt) {
   g.setAttribute('color', new THREE.BufferAttribute(C, 3));
 }
 
-const ss0 = (u) => sstep(u, 0.03, 0.3); // strand grooves fade out at the crown pole
+const ss0 = (u) => sstep(u, 0.2, 0.75); // strand grooves fade out at the crown pole
 // ---- the shell ---------------------------------------------------------------------------------------------------
 export function shell(o) {
   const { rx, ry, rz, cy = 0, yEnd, thick, el0 = 0, rows = 40, cols = 84, flare = 0, curl = 0, groove, color } = o;
@@ -184,7 +184,7 @@ export function buildHairMeshes(L) {
   if (st === 'wild') { // long, jagged, windswept
     sh({ el0, yEnd: hat((az) => prof([[0, 0.1], [0.5, 0.08], [1.0, 0.0], [1.5, -0.12], [2.2, -0.2], [PI, -0.22]])(az) - 0.05 * tips(az, 9)), thick: (az, u) => 0.02 + 0.014 * (1 - u), flare: 0.1, groove: grooveF(9, 0.006) });
     if (!covered) sp([{ az: 0.3, el: 0.8, len: 0.2, w: 0.06, pitch: 2.0, yaw: 0.5, bend: 0.04 }, { az: -0.3, el: 0.8, len: 0.2, w: 0.06, pitch: 2.0, yaw: -0.5, bend: 0.04 }, { az: 0, el: 0.3, len: 0.22, w: 0.07, pitch: 0.7, bend: 0.07 },
-      { az: 1.2, el: 0.9, len: 0.3, w: 0.07, pitch: 1.5, yaw: 0, bend: 0.14 }, { az: -1.2, el: 0.9, len: 0.3, w: 0.07, pitch: 1.5, yaw: 0, bend: 0.14 }, { az: 2.4, el: 1.0, len: 0.34, w: 0.075, pitch: 1.7, yaw: 0, bend: 0.16 }, { az: -2.4, el: 1.0, len: 0.34, w: 0.075, pitch: 1.7, yaw: 0, bend: 0.16 }, { az: PI, el: 1.0, len: 0.36, w: 0.08, pitch: 2.3, yaw: 0, bend: 0.1 }]);
+      { az: 1.2, el: 0.9, len: 0.25, w: 0.07, pitch: 1.5, yaw: 0, bend: 0.14 }, { az: -1.2, el: 0.9, len: 0.25, w: 0.07, pitch: 1.5, yaw: 0, bend: 0.14 }, { az: 2.4, el: 1.0, len: 0.28, w: 0.075, pitch: 1.7, yaw: 0, bend: 0.16 }, { az: -2.4, el: 1.0, len: 0.28, w: 0.075, pitch: 1.7, yaw: 0, bend: 0.16 }, { az: PI, el: 1.0, len: 0.36, w: 0.08, pitch: 2.3, yaw: 0, bend: 0.1 }]);
   }
   if (st === 'swept') { // anime side-swept fringe over one eye
     sh({ el0, yEnd: hat((az) => prof([[0, 0.06], [0.5, 0.09], [1.0, 0.04], [1.4, -0.03], [2.0, -0.07], [PI, -0.09]])(az) - 0.07 * Math.max(0, Math.sin(az + 0.6)) * bangW(az)), groove: grooveF(9, 0.005) });
