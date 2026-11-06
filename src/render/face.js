@@ -50,20 +50,23 @@ export function headGeometry(L) {
     const gx = N.getX(i) / hw, gy = N.getY(i) / hh, gz = N.getZ(i), l = Math.hypot(gx, gy, gz) || 1;
     N.setXYZ(i, gx / l, gy / l, gz / l);
   }
+  // the face only occupies the front half of the head: remap u so that half uses the whole texture width (2x detail);
+  // everything behind the ears clamps to the skin-coloured texture edge
+  const UV = g.attributes.uv; for (let i = 0; i < UV.count; i++) UV.setX(i, Math.min(1, Math.max(0, 0.5 + (UV.getX(i) - 0.25) * 2)));
   g.computeBoundingSphere();
   geoCache.set(key, g);
   return g;
 }
 
 // ---- painted face texture ------------------------------------------------------------------------------------------
-const W = 1024, H = 512;
+const W = 1024, H = 640;
 const texCache = new Map();
 export function headMaterial(L) {
   const key = JSON.stringify([L.skin, L.headW, L.headH, L.eyes, L.eyeColor, L.eyeGap, L.eyeY, L.eyeSize, L.brows, L.browColor ?? L.hair,
     L.nose, L.mouth, L.eyeTilt ?? 0, L.blush, L.freckles, L.accessories.includes('eyepatch'), L.accessories.includes('scar')]);
   if (!texCache.has(key)) {
     const tex = new THREE.CanvasTexture(paintFace(L));
-    tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 4; tex.generateMipmaps = true; tex.minFilter = THREE.LinearMipmapLinearFilter;
+    tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 8; tex.generateMipmaps = true; tex.minFilter = THREE.LinearMipmapLinearFilter;
     texCache.set(key, new THREE.MeshStandardMaterial({ map: tex, roughness: 0.85, metalness: 0 }));
   }
   return texCache.get(key);
@@ -76,8 +79,8 @@ function paintFace(L) {
   const skin = new THREE.Color(L.skin);
   x.fillStyle = css(skin); x.fillRect(0, 0, W, H);
   // physical face units (y up) -> texture; front of the head is u = 0.25
-  const kx = W / (2 * Math.PI * R * hw), ky = H / (Math.PI * R * hh);
-  x.setTransform(kx, 0, 0, -ky, W * 0.25, H * 0.5);
+  const kx = W / (Math.PI * R * hw), ky = H / (Math.PI * R * hh);
+  x.setTransform(kx, 0, 0, -ky, W * 0.5, H * 0.5);
   const ink = '#2a2024', lipC = css(mix(skin.getHex(), 0x9a3a3a, 0.62)), skinDark = css(mix(skin.getHex(), 0x5a2a20, 0.3));
   const brow = css(new THREE.Color(L.browColor ?? L.hair).lerp(new THREE.Color(0), 0.1));
   const ell = (cx, cy, rx, ry, fill, rot = 0) => { x.fillStyle = fill; x.beginPath(); x.ellipse(cx, cy, rx, ry, rot, 0, Math.PI * 2); x.fill(); };

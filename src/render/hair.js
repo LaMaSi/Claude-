@@ -4,6 +4,7 @@
 // nape. Shallow strand grooves + vertex-colour shading give it a sculpted, combed look. Gathered hair (ponytail,
 // braids, pigtails) is a twisted tube; buns are grooved blobs.
 import * as THREE from 'three';
+import { mat } from './palette.js';
 
 const TAU = Math.PI * 2, PI = Math.PI;
 export const clamp = THREE.MathUtils.clamp, sstep = THREE.MathUtils.smoothstep;
@@ -35,6 +36,7 @@ export function finish(g, color, shadeAt) {
   g.setAttribute('color', new THREE.BufferAttribute(C, 3));
 }
 
+const ss0 = (u) => sstep(u, 0.03, 0.3); // strand grooves fade out at the crown pole
 // ---- the shell ---------------------------------------------------------------------------------------------------
 export function shell(o) {
   const { rx, ry, rz, cy = 0, yEnd, thick, el0 = 0, rows = 40, cols = 84, flare = 0, curl = 0, groove, color } = o;
@@ -45,7 +47,7 @@ export function shell(o) {
     const e0 = typeof el0 === 'function' ? el0(az) : el0, ye = yEnd(az);
     const elEnd = ye >= yEq ? Math.acos(clamp((ye - cy) / ry, -1, 1)) : elEq;
     const elStop = Math.max(elEnd, e0 + 0.0001), drop = ye < yEq ? yEq - ye : 0, fd = drop > 0 ? 0.5 : 1;
-    let t = thick(az, u), gr = groove ? groove(az, u) : 0, x, y, z;
+    let t = thick(az, u), gr = groove ? groove(az, u) * ss0(u) : 0, x, y, z;
     const edge = 1 - sstep(u, 0.86, 1);
     t = t * (0.2 + 0.8 * edge) * (e0 > 0.01 ? Math.pow(sstep(u, 0, 0.85), 1.6) : 1) + 0.002;
     if (drop === 0 && elEnd <= e0 + 0.03) { t = -0.03; gr = 0; } // no hair here (bald front of a tonsure etc.): sink the open edge into the skull
@@ -106,12 +108,31 @@ export function blob(r, color, sx = 1, sy = 1, sz = 1) {
   g.computeVertexNormals(); finish(g, color, (v) => sh[v]); return g;
 }
 
+// ---- spikes: a flat pointed blade that sweeps back and curls, rooted inside the scalp ---------------------------------
+const spikeGeos = new Map();
+function spikeGeometry(bend, flat) {
+  const key = bend + '|' + flat; if (spikeGeos.has(key)) return spikeGeos.get(key);
+  const pts = []; for (let i = 0; i <= 14; i++) { const t = i / 14; pts.push(new THREE.Vector2(Math.max(0.0005, Math.pow(1 - t, 0.85) * (1 + 0.25 * Math.sin(t * PI))), t - 0.12)); }
+  const g = new THREE.LatheGeometry(pts, 12), P = g.attributes.position;
+  for (let i = 0; i < P.count; i++) { const t = Math.max(0, P.getY(i) + 0.12); P.setZ(i, P.getZ(i) * flat - bend * t * t); }
+  g.computeVertexNormals(); spikeGeos.set(key, g); return g;
+}
+// az/el place the root on the head ellipsoid; pitch tilts the spike from straight up toward the back (negative = forward), yaw turns it sideways
+export function spike(color, hw, hh, o) {
+  const { az = 0, el = 0.5, len = 0.2, w = 0.05, pitch = 0.3, yaw = 0, bend = 0.05, flat = 0.55 } = o;
+  const se = Math.sin(el), ce = Math.cos(el), rx = 0.205 * hw, ry = 0.205 * hh, rz = 0.205;
+  const m = new THREE.Mesh(spikeGeometry(bend / len, flat), mat(color, { flatShading: false }));
+  m.position.set(rx * se * Math.sin(az) * 0.96, ry * ce * 0.96, rz * se * Math.cos(az) * 0.96);
+  m.rotation.order = 'YXZ'; m.rotation.set(-pitch, az + PI + yaw, 0); // heading = outward from the root, yaw swings it sideways
+  m.scale.set(w * 1.2, len * 1.35, w * 1.2); m.castShadow = true; m.receiveShadow = true; return m;
+}
+
 // ---- styles --------------------------------------------------------------------------------------------------------
 export const COVERS = new Set(['coif', 'hood', 'kerchief', 'bakerhat', 'pointed', 'strawhat', 'flatcap', 'helm']);
 
 export function buildHairMeshes(L) {
   const { hairStyle: st, hair: c, headW: hw, headH: hh, headwear } = L;
-  const covered = COVERS.has(headwear), out = [];
+  const covered = COVERS.has(headwear), out = [], extra = [];
   const base = { rx: 0.205 * hw, ry: 0.205 * hh, rz: 0.205, cy: 0.0, color: c };
   const bangW = (az) => 1 - sstep(Math.abs(az), 0.85, 1.25);   // 1 over the forehead, 0 beyond the temples
   const add = (geo, x = 0, y = 0, z = 0) => out.push({ geo, pos: [x, y, z] });
@@ -148,6 +169,27 @@ export function buildHairMeshes(L) {
     if (st === 'braids') for (const s of [-1, 1]) add(tube([[s * 0.17, 0.02, -0.03], [s * 0.19, -0.12, -0.04], [s * 0.185, -0.3, -0.04], [s * 0.18, -0.46, -0.04]], 0.05, 0.036, { twist: 6, rip: 0.16, color: c }));
     if (st === 'pigtails') for (const s of [-1, 1]) add(tube((covered ? [[s * 0.2, -0.08, -0.02], [s * 0.235, -0.17, -0.03], [s * 0.25, -0.27, -0.02], [s * 0.24, -0.36, -0.02]] : [[s * 0.2, 0.06, -0.02], [s * 0.27, -0.04, -0.03], [s * 0.3, -0.18, -0.02], [s * 0.28, -0.3, -0.02]]), covered ? 0.055 : 0.07, 0.018, { twist: 1.2, rip: 0.06, color: c }));
   }
+  const sp = (list, tone = 0.06) => list.forEach((o, i) => extra.push(spike(tintCol(c, 1 + ((i % 3) - 1) * tone).getHex(), hw, hh, o)));
+  if (st === 'spiky') { // JRPG hero: swept-back spikes, two front bangs
+    sh({ el0, yEnd: hat(withBangs([[0, 0.1], [0.5, 0.09], [1.0, 0.05], [1.35, 0.0], [1.7, -0.02], [2.3, -0.06], [PI, -0.08]], 0.0, 9)), groove: grooveF(9, 0.004) });
+    if (!covered) sp([{ az: 0.32, el: 0.8, len: 0.17, w: 0.052, pitch: 2.1, yaw: 0.35, bend: 0.03 }, { az: -0.32, el: 0.8, len: 0.17, w: 0.052, pitch: 2.1, yaw: -0.35, bend: 0.03 }, { az: 0, el: 0.78, len: 0.14, w: 0.045, pitch: 2.4, yaw: 0, bend: 0.02 },
+      { az: 0, el: 0.3, len: 0.27, w: 0.075, pitch: 0.9, bend: 0.08 }, { az: 0.85, el: 0.55, len: 0.25, w: 0.07, pitch: 1.0, yaw: 0.55, bend: 0.07 }, { az: -0.85, el: 0.55, len: 0.25, w: 0.07, pitch: 1.0, yaw: -0.55, bend: 0.07 },
+      { az: 1.7, el: 0.85, len: 0.22, w: 0.07, pitch: 1.0, yaw: 0, bend: 0.1 }, { az: -1.7, el: 0.85, len: 0.22, w: 0.07, pitch: 1.0, yaw: 0, bend: 0.1 },
+      { az: 2.6, el: 0.9, len: 0.22, w: 0.07, pitch: 1.15, yaw: 0, bend: 0.1 }, { az: -2.6, el: 0.9, len: 0.22, w: 0.07, pitch: 1.15, yaw: 0, bend: 0.1 }, { az: PI, el: 0.75, len: 0.24, w: 0.075, pitch: 1.3, yaw: 0, bend: 0.06 }]);
+  }
+  if (st === 'spikes') { // short, upright and cheeky
+    sh({ el0, yEnd: hat(withBangs(SHORT, 0.03, 9)), groove: grooveF(9, 0.004) });
+    if (!covered) sp([0, 0.7, -0.7, 1.4, -1.4, 2.2, -2.2, PI].map((a, i) => ({ az: a, el: 0.28 + Math.abs(a) * 0.22 * 0.6, len: 0.2 - (i % 2) * 0.05, w: 0.062, pitch: 0.2 + Math.abs(Math.cos(a / 2)) * 0.1 + Math.abs(a) * 0.12, yaw: 0, bend: 0.03 })));
+  }
+  if (st === 'wild') { // long, jagged, windswept
+    sh({ el0, yEnd: hat((az) => prof([[0, 0.1], [0.5, 0.08], [1.0, 0.0], [1.5, -0.12], [2.2, -0.2], [PI, -0.22]])(az) - 0.05 * tips(az, 9)), thick: (az, u) => 0.02 + 0.014 * (1 - u), flare: 0.1, groove: grooveF(9, 0.006) });
+    if (!covered) sp([{ az: 0.3, el: 0.8, len: 0.2, w: 0.06, pitch: 2.0, yaw: 0.5, bend: 0.04 }, { az: -0.3, el: 0.8, len: 0.2, w: 0.06, pitch: 2.0, yaw: -0.5, bend: 0.04 }, { az: 0, el: 0.3, len: 0.22, w: 0.07, pitch: 0.7, bend: 0.07 },
+      { az: 1.2, el: 0.9, len: 0.3, w: 0.07, pitch: 1.5, yaw: 0, bend: 0.14 }, { az: -1.2, el: 0.9, len: 0.3, w: 0.07, pitch: 1.5, yaw: 0, bend: 0.14 }, { az: 2.4, el: 1.0, len: 0.34, w: 0.075, pitch: 1.7, yaw: 0, bend: 0.16 }, { az: -2.4, el: 1.0, len: 0.34, w: 0.075, pitch: 1.7, yaw: 0, bend: 0.16 }, { az: PI, el: 1.0, len: 0.36, w: 0.08, pitch: 2.3, yaw: 0, bend: 0.1 }]);
+  }
+  if (st === 'swept') { // anime side-swept fringe over one eye
+    sh({ el0, yEnd: hat((az) => prof([[0, 0.06], [0.5, 0.09], [1.0, 0.04], [1.4, -0.03], [2.0, -0.07], [PI, -0.09]])(az) - 0.07 * Math.max(0, Math.sin(az + 0.6)) * bangW(az)), groove: grooveF(9, 0.005) });
+    if (!covered) sp([{ az: -0.2, el: 0.75, len: 0.22, w: 0.1, pitch: 2.3, yaw: 0.9, bend: 0.0, flat: 0.4 }, { az: 0.5, el: 0.8, len: 0.17, w: 0.07, pitch: 2.1, yaw: 0.6, bend: 0.0, flat: 0.45 }, { az: 1.5, el: 1.1, len: 0.14, w: 0.07, pitch: 2.9, yaw: 1.5, bend: 0.03 }]);
+  }
   if (st === 'tonsure') { // monk's fringe: a wedge-shaped band, pointed at the temples, thicker at the back
     const top = prof([[0, 1.5], [1.0, 1.42], [1.4, 1.2], [2.2, 1.04], [PI, 1.0]]), bot = prof([[0, 0.3], [1.0, 0.3], [1.3, 0.05], [1.7, -0.02], [2.4, -0.07], [PI, -0.09]]);
     sh({ el0: top, yEnd: (az) => bot(az) - 0.02 * tips(az, 9) * sstep(Math.abs(az), 1.5, 2.2), thick: (az, u) => 0.022 + 0.012 * sstep(Math.abs(az), 1.4, 2.6), groove: grooveF(8, 0.005) });
@@ -157,11 +199,12 @@ export function buildHairMeshes(L) {
     sh({ el0: top, yEnd: (az) => bot(az) - 0.02 * tips(az, 9) * sstep(Math.abs(az), 1.5, 2.2), thick: () => 0.024, groove: grooveF(8, 0.004) });
   }
   if (st === 'bald') sh({ el0: 1.3, yEnd: prof([[0, 0.3], [1.25, 0.3], [1.5, 0.04], [1.85, 0.3], [PI, 0.3]]), thick: () => 0.02 });
-  return out;
+  out.extra = extra; return out;
 }
 
 export function buildHair(head, L) {
-  for (const { geo, pos } of buildHairMeshes(L)) {
+  const list = buildHairMeshes(L); for (const m of list.extra || []) head.add(m);
+  for (const { geo, pos } of list) {
     const m = new THREE.Mesh(geo, hairMat()); m.position.set(...pos); m.castShadow = true; m.receiveShadow = true; head.add(m);
   }
 }
