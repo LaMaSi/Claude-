@@ -60,6 +60,14 @@ function torso(parent, g, color, pts = TORSO) {
   if (!geo) { geo = new THREE.LatheGeometry(new THREE.SplineCurve(pts.map(([r, y]) => new THREE.Vector2(r, y))).getPoints(28), 28); torsoGeo.set(pts, geo); }
   const m = new THREE.Mesh(geo, smooth(color)); m.scale.set(g, 1, 0.6); m.castShadow = m.receiveShadow = true; parent.add(m); return m;
 }
+// Rolled collar that grows out of the shoulders and wraps the neck (a lathe squashed to the chest depth),
+// so there is no separate ring floating around a bare strip of neck.
+const COLLAR = [[0.17, 0.95], [0.15, 0.98], [0.12, 1.008], [0.095, 1.03], [0.075, 1.045], [0.06, 1.047], [0.05, 1.035], [0.05, 0.98]];
+let collarGeo = null;
+function collarMesh(parent, g, color, k = 1) {
+  if (!collarGeo) collarGeo = new THREE.LatheGeometry(new THREE.SplineCurve(COLLAR.map(([r, y]) => new THREE.Vector2(r, y))).getPoints(24), 28);
+  const m = new THREE.Mesh(collarGeo, smooth(color)); m.scale.set(g * k, 1, 0.7 * k); m.castShadow = m.receiveShadow = true; parent.add(m); return m;
+}
 function cyl(parent, rt, rb, h, color, y, seg = 16) {
   const m = new THREE.Mesh(new THREE.CylinderGeometry(rt, rb, h, seg), smooth(color));
   m.position.y = y + h / 2; m.castShadow = true; m.receiveShadow = true;
@@ -163,7 +171,7 @@ function buildHuman({ look, scale = 1, headScale = 1 }) {
   const yoke = () => {};
   const skirt = (c, rt, rb, h, y) => { const m = cyl(body, rt * g, rb * g, h, c, y); m.scale.z = 0.82; return m; };
   const belt = (c, y = 0.53) => ring(body, 0.215 * g, 0.032, c, y, 1, 0.78);
-  const collar = (c) => ring(body, 0.08, 0.024, c, 1.0, 1, 1);
+  const collar = (c, k = 1) => collarMesh(body, g, c, k);
   let sleeve = 'long', sleeveW = 0.1, sleeveC = shirt;
   if (outfit === 'gown') {
     upper(shirt); yoke(shirt); skirt(shirt, 0.19, 0.3, 0.7, 0.13);
@@ -174,7 +182,7 @@ function buildHuman({ look, scale = 1, headScale = 1 }) {
     box(body, 0.3 * g, 0.42, 0.06, C.cream, 0, 0.1, 0.2, 0.028); belt(C.leather, 0.55); collar(C.cream);
   } else if (outfit === 'robe') {
     skirt(shirt, 0.19, 0.34, 0.8, 0.06); upper(shirt);
-    ring(body, 0.23 * g, 0.03, C.cream, 0.52, 1, 0.82); ring(body, 0.09, 0.03, tint(shirt, -0.2), 1.0, 1.1, 1.1);
+    ring(body, 0.23 * g, 0.03, C.cream, 0.52, 1, 0.82); collar(tint(shirt, -0.2), 1.08);
     sleeve = 'wide'; sleeveW = 0.16;
   } else if (outfit === 'smith') {
     upper(shirt); skirt(shirt, 0.2, 0.25, 0.34, 0.24);
@@ -187,7 +195,7 @@ function buildHuman({ look, scale = 1, headScale = 1 }) {
     belt(C.leather); sleeveC = C.cream;
   } else if (outfit === 'noble') {
     upper(shirt); yoke(shirt); skirt(shirt, 0.2, 0.29, 0.42, 0.2);
-    ring(body, 0.29 * g, 0.032, L.trim, 0.22, 1, 0.82); ring(body, 0.085, 0.028, L.trim, 1.0, 1, 1);
+    ring(body, 0.29 * g, 0.032, L.trim, 0.22, 1, 0.82); collar(L.trim);
     const sash = ell(body, 0.09, 0.78, 0.3, L.trim, 0, 0.7, 0.0); sash.rotation.z = 0.62;
     belt(C.gold, 0.5);
   } else { // tunic
