@@ -5,6 +5,7 @@ import * as THREE from 'three';
 import { box } from './models.js';
 import { C, mat } from './palette.js';
 import { HEAD_R, headGeometry, headMaterial } from './face.js';
+import { buildHair } from './hair.js';
 
 const tint = (hex, amt) => { const c = new THREE.Color(hex); return amt < 0 ? c.lerp(new THREE.Color(0), -amt).getHex() : c.lerp(new THREE.Color(0xffffff), amt).getHex(); };
 function ball(parent, r, color, x, y, z, sx = 1, sy = 1, sz = 1, detail = 3) {
@@ -44,46 +45,6 @@ function hand(arm, color, y) {
   const t = ell(g, 0.035, 0.06, 0.035, color, 0.04, -0.03, 0.025); t.rotation.z = -0.5;
   return g;
 }
-// A hair "lock": a flattened, pointed, optionally curved strand (lathe, deformed), rooted on the scalp ellipsoid.
-// az: 0 = front, +/-pi/2 = sides, pi = back; el: 0 = crown ... pi/2 = equator. Direction runs downhill along the scalp,
-// blended with outward (out) and sideways (sweep); curl bends the tip sideways, curlN bends it away from / into the head.
-const lockGeo = new Map();
-function lockGeometry(curl, curlN) {
-  const key = curl + '|' + curlN;
-  let g = lockGeo.get(key);
-  if (g) return g;
-  const pts = [[0, 0], [0.55, -0.04], [0.92, -0.14], [1, -0.3], [0.86, -0.56], [0.5, -0.8], [0.2, -0.94], [0, -1]];
-  g = new THREE.LatheGeometry(new THREE.SplineCurve(pts.map(([r, y]) => new THREE.Vector2(r, y))).getPoints(18), 10);
-  const P = g.attributes.position;
-  for (let i = 0; i < P.count; i++) { const t = -P.getY(i); P.setX(i, P.getX(i) + curl * t * t); P.setZ(i, P.getZ(i) * 0.5 + curlN * t * t); }
-  g.computeVertexNormals(); lockGeo.set(key, g); return g;
-}
-// scalp cap: a sphere section that stops at the hairline (clear brow and eyes) and drops lower at the nape
-let capGeo = null;
-function scalpCap() {
-  if (capGeo) return capGeo;
-  const maxT = 1.22, g = new THREE.SphereGeometry(1, 30, 16, 0, Math.PI * 2, 0, maxT), P = g.attributes.position;
-  for (let i = 0; i < P.count; i++) {
-    const nz = P.getZ(i), th = Math.acos(THREE.MathUtils.clamp(P.getY(i), -1, 1)), k = Math.pow(th / maxT, 3);
-    const drop = nz > 0 ? 0.5 * (1 - nz) : 0.5 + 0.3 * -nz; // hairline: high at the front, dipping at the temples, lowest at the nape
-    P.setY(i, P.getY(i) - drop * k);
-  }
-  g.computeVertexNormals(); capGeo = g; return g;
-}
-const _v = new THREE.Vector3();
-function lockOn(head, color, hw, o) {
-  const { az = 0, el = 0.9, len = 0.15, w = 0.05, out = 0.3, sweep = 0, curl = 0, curlN = 0, ctr = [0, 0.05, -0.02], r = [0.215, 0.183, 0.226] } = o;
-  const sa = Math.sin(az), ca = Math.cos(az), se = Math.sin(el), ce = Math.cos(el);
-  const n = new THREE.Vector3(se * sa, ce, se * ca).normalize();
-  const root = new THREE.Vector3(ctr[0] + r[0] * hw * se * sa, ctr[1] + r[1] * ce, ctr[2] + r[2] * se * ca).addScaledVector(n, -0.025);
-  const down = new THREE.Vector3(ce * sa, -se, ce * ca).normalize();
-  const d = down.clone().addScaledVector(n, out).addScaledVector(_v.set(ca, 0, -sa), sweep).normalize();
-  const zx = n.clone().addScaledVector(d, -n.dot(d)).normalize(), yx = d.clone().negate(), xx = new THREE.Vector3().crossVectors(yx, zx);
-  const m = new THREE.Mesh(lockGeometry(curl, curlN), smooth(color));
-  m.matrixAutoUpdate = true; m.position.copy(root); m.setRotationFromMatrix(new THREE.Matrix4().makeBasis(xx, yx, zx)); m.scale.set(w, len, w);
-  m.castShadow = true; m.receiveShadow = true; head.add(m); return m;
-}
-
 function ring(parent, r, tube, color, y, sx = 1, sz = 0.8) {
   const m = new THREE.Mesh(new THREE.TorusGeometry(r, tube, 8, 22), smooth(color));
   m.rotation.x = Math.PI / 2; m.scale.set(sx, sz, 1); m.position.y = y; m.castShadow = true; parent.add(m); return m;
@@ -175,46 +136,6 @@ function buildFace(head, L) {
 }
 
 // ---- hair + headwear --------------------------------------------------------------------------------------------
-const HIDES_HAIR = new Set(['coif', 'hood', 'kerchief', 'bakerhat', 'pointed', 'strawhat', 'flatcap']);
-function buildHair(head, L) {
-  const { hairStyle: st, hair: c, headW: hw, headwear } = L;
-  const covered = HIDES_HAIR.has(headwear);
-  let n = 0; const shade = () => tint(c, ((n++ % 3) - 1) * 0.07); // strand-to-strand colour variation reads as sculpted hair
-  const lk = (o) => lockOn(head, shade(), hw, o);
-  const cap = () => { if (covered) return; const m = new THREE.Mesh(scalpCap(), mat(c, { flatShading: false, side: THREE.DoubleSide })); m.scale.set(0.215 * hw, 0.2, 0.226); m.position.set(0, 0.05, -0.02); m.castShadow = true; m.receiveShadow = true; head.add(m); };
-  const bangs = (k = 6, len = 0.12, sweep = 0.5, el = 0.8, w = 0.07) => {
-    if (covered) return;
-    for (let i = 0; i < k; i++) { const t = k === 1 ? 0 : i / (k - 1) - 0.5; lk({ az: t * 1.75, el: el + Math.abs(t) * 0.3, len: len * (1 - Math.abs(t) * 0.35), w, out: 0.6, sweep: sweep * (1.1 - Math.abs(t)) + t * 0.3, curl: -sweep * 0.12 }); }
-  };
-  const sides = (len = 0.1, el = 1.15, w = 0.06, out = 0.2) => { for (const s of [-1, 1]) lk({ az: s * 1.4, el, len, w, out, curl: s * 0.03 }); };
-  const back = (azs, len, w, el = 1.1, out = 0.2, curlN = 0) => { for (const a of azs) lk({ az: a, el: el + 0.12 * Math.abs(Math.cos(a)), len, w, out, curlN }); };
-  const BACK5 = [2.15, 2.65, Math.PI, 3.63, 4.13];
-
-  if (st === 'short') { cap(); bangs(6, 0.1, 0.5); sides(0.09); back([2.8, 3.48], 0.1, 0.07, 1.0); if (headwear === 'hood') ell(head, 0.3, 0.05, 0.1, c, 0, 0.1, 0.15); }
-  if (st === 'messy') {
-    cap(); bangs(4, 0.12, 0.9, 0.7, 0.06);
-    for (let i = 0; i < 11; i++) { const a = 0.55 + i * 0.52, e = 0.28 + ((i * 37) % 5) * 0.2; if (Math.abs(Math.sin(a / 2)) < 0.35 && e > 0.8) continue; lk({ az: a, el: e, len: 0.15 + (i % 3) * 0.03, w: 0.052, out: 1.7, curl: 0.25 * (i % 2 ? 1 : -1) }); }
-  }
-  if (st === 'curly') { for (let i = 0; i < 18; i++) { const a = i * 2.4, e = 0.25 + (i % 6) * 0.2, v = new THREE.Vector3(Math.sin(e) * Math.cos(a), Math.cos(e), Math.sin(e) * Math.sin(a)); if (v.z > 0.45 && v.y < 0.8) continue; ball(head, 0.075, c, v.x * 0.2 * hw, v.y * 0.19 + 0.04, v.z * 0.2, 1, 1, 1, 2); } ball(head, 0.2, c, 0, 0.06, -0.06, hw, 0.8, 1, 2); }
-  if (st === 'puff') { ball(head, 0.27, c, 0, 0.1, -0.1, hw, 1, 1, 3); }
-  if (st === 'long') { cap(); bangs(6, 0.12, 0.7); for (const s of [-1, 1]) { lk({ az: s * 1.3, el: 1.1, len: 0.42, w: 0.075, out: 0.1, curl: s * 0.04 }); lk({ az: s * 1.55, el: 1.25, len: 0.36, w: 0.07, out: 0.1 }); } back(BACK5, 0.6, 0.125, 1.05, 0.15); }
-  if (st === 'bob') { cap(); bangs(6, 0.12, 0.6); for (const s of [-1, 1]) lk({ az: s * 1.35, el: 1.15, len: 0.24, w: 0.075, out: 0.15, curlN: -0.06 }); back(BACK5, 0.27, 0.095, 1.05, 0.2, -0.07); }
-  if (st === 'braid') { cap(); bangs(6, 0.1, 0.5); sides(0.1); for (let i = 0; i < 4; i++) ball(head, 0.065 - i * 0.004, c, 0, -0.08 - i * 0.11, -0.24 - i * 0.015, 1, 1.15, 1, 2); ball(head, 0.03, C.wool, 0, -0.5, -0.29, 1, 1, 1, 2); }
-  if (st === 'braids') { cap(); bangs(6, 0.1, 0.5); for (const s of [-1, 1]) { for (let i = 0; i < 4; i++) ball(head, 0.055 - i * 0.003, c, s * 0.17, -0.06 - i * 0.1, 0.0 - i * 0.01, 1, 1.15, 1, 2); ball(head, 0.025, C.woolOchre, s * 0.17, -0.46, -0.03, 1, 1, 1, 2); } }
-  if (st === 'pigtails') { cap(); bangs(6, 0.1, 0.4); for (const s of [-1, 1]) { ball(head, 0.035, C.woolOchre, s * 0.2, 0.06, -0.02, 1, 1, 1, 2); lk({ az: s * 1.5, el: 1.0, len: 0.3, w: 0.085, out: 1.1, curl: s * 0.1, curlN: 0 }); } }
-  if (st === 'bun') { cap(); bangs(6, 0.1, 0.5); sides(0.08); ball(head, 0.1, c, 0, 0.27, -0.04, 1, 1, 1, 3); }
-  if (st === 'twinbuns') { cap(); bangs(6, 0.09, 0.4); for (const s of [-1, 1]) ball(head, 0.08, c, s * 0.13, 0.26, -0.03, 1, 1, 1, 3); }
-  if (st === 'topknot') { cap(); bangs(6, 0.08, 0.3); ball(head, 0.07, c, 0, 0.27, -0.03, 1, 1, 1, 3); ring(head, 0.06, 0.012, C.wool, 0.22, 1, 1).position.z = -0.03; }
-  if (st === 'ponytail') { cap(); bangs(6, 0.1, 0.5); sides(0.08); ball(head, 0.07, c, 0, 0.12, -0.23, 1, 1, 1, 3); lk({ az: Math.PI, el: 0.95, len: 0.46, w: 0.1, out: 1.4, curlN: 0.18 }); lk({ az: Math.PI + 0.35, el: 0.95, len: 0.4, w: 0.07, out: 1.4, curlN: 0.16 }); lk({ az: Math.PI - 0.35, el: 0.95, len: 0.4, w: 0.07, out: 1.4, curlN: 0.16 }); }
-  if (st === 'shaggy') { cap(); bangs(6, 0.14, 0.8, 0.75, 0.065); for (let i = 0; i < 9; i++) lk({ az: 1.2 + i * 0.47, el: 1.1 + (i % 3) * 0.12, len: 0.22 + (i % 2) * 0.05, w: 0.08, out: 0.3, curl: (i % 2 ? 1 : -1) * 0.05 }); }
-  if (st === 'tonsure') { // hair ring open at the front so the brow stays clear
-    const g2 = new THREE.TorusGeometry(0.19, 0.04, 8, 24, Math.PI * 1.45); g2.rotateZ(Math.PI * 0.775);
-    const t = new THREE.Mesh(g2, smooth(c)); t.rotation.x = Math.PI / 2; t.scale.set(hw, 1.03, 1); t.position.y = 0.03; t.castShadow = true; head.add(t);
-    back([2.4, 2.9, 3.4, 3.9], 0.13, 0.07, 1.2); sides(0.08, 1.35); }
-  if (st === 'bald') { for (const s of [-1, 1]) lk({ az: s * 1.5, el: 1.4, len: 0.06, w: 0.05, out: 0.05 }); }
-  if (st === 'receding') { for (const s of [-1, 1]) lk({ az: s * 1.45, el: 1.15, len: 0.09, w: 0.055, out: 0.05 }); back([2.5, 3.14, 3.78], 0.12, 0.08, 1.15, 0.05); lk({ az: 0, el: 0.4, len: 0.06, w: 0.04, out: 0.6 }); }
-}
-
 function buildHeadwear(head, L) {
   const k = L.headwear, col = L.headwearColor, hw = L.headW;
   if (!k) return;
