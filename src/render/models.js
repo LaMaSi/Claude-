@@ -208,6 +208,45 @@ export function barrel(g = new THREE.Group()) {
   return g;
 }
 
+export function pond(g = new THREE.Group()) {
+  cyl(g, 1.0, 1.05, 0.14, C.soilDark, 0, 0, 0, 14);                                       // bank
+  const w = cyl(g, 0.88, 0.88, 0.05, C.water, 0, 0.12, 0, 14, { roughness: 0.25, metalness: 0.1 }); w.castShadow = false;
+  for (let i = 0; i < 11; i++) { const a = i * 0.57, r = 0.98; ball(g, 0.15 + (i % 3) * 0.03, i % 2 ? C.stone : C.stoneDark, Math.cos(a) * r, 0.1, Math.sin(a) * r * 0.95, 0, 0.7); }
+  for (const [x, z, h] of [[-0.55, -0.35, 0.7], [-0.7, -0.15, 0.55], [-0.4, -0.5, 0.6]]) cyl(g, 0.012, 0.012, h, C.leafDark, x, 0.1, z, 4);
+  for (const [x, z] of [[0.3, -0.2], [0.05, 0.25]]) { const p = cyl(g, 0.13, 0.13, 0.015, C.leaf, x, 0.17, z, 8); p.castShadow = false; }
+  ball(g, 0.04, 0xf2a0b8, 0.3, 0.2, -0.2, 0);
+  box(g, 1.1, 0.07, 0.2, C.oak, 0.1, 0.12, 1.05, 0.02);                                     // little jetty plank
+  box(g, 0.09, 0.14, 0.09, C.oakDark, -0.4, 0, 1.12, 0.02); box(g, 0.09, 0.14, 0.09, C.oakDark, 0.6, 0, 1.12, 0.02);
+  const rod = cyl(g, 0.012, 0.02, 1.0, C.oakDark, 0.78, 0.15, 1.05, 4); rod.rotation.z = -0.5; rod.rotation.x = -0.25;
+  return g;
+}
+export function easel(g = new THREE.Group()) {
+  for (const [x, z, rx, rz] of [[-0.28, 0.12, 0.12, 0.18], [0.28, 0.12, 0.12, -0.18], [0, -0.28, -0.3, 0]]) {
+    const leg = cyl(g, 0.022, 0.026, 1.6, C.oakDark, x * 0.6, 0, z * 0.6, 5); leg.rotation.x = rx; leg.rotation.z = rz;
+  }
+  box(g, 0.72, 0.05, 0.05, C.oak, 0, 0.55, 0.1, 0.01);                                      // canvas ledge
+  box(g, 0.6, 0.72, 0.03, C.linen, 0, 0.6, 0.06, 0.008);                                    // canvas
+  ball(g, 0.14, C.woolGreen, -0.1, 1.0, 0.085, 0, 0.5); ball(g, 0.1, C.woolBlue, 0.08, 1.12, 0.085, 0, 0.6);
+  ball(g, 0.09, C.woolOchre, 0.12, 0.85, 0.085, 0, 0.55); ball(g, 0.06, C.wool, -0.12, 0.8, 0.085, 0, 0.6);
+  box(g, 0.34, 0.03, 0.3, C.oakLight, 0.55, 0.0, 0.1, 0.01);                                // paint box
+  for (const [x, c] of [[0.48, C.wool], [0.55, C.woolOchre], [0.62, C.woolBlue]]) cyl(g, 0.03, 0.03, 0.04, c, x, 0.03, 0.1, 6);
+  return g;
+}
+export function dummy(g = new THREE.Group()) {
+  cyl(g, 0.32, 0.36, 0.08, C.oakDark, 0, 0, 0, 10);                                          // base
+  cyl(g, 0.07, 0.08, 1.45, C.oak, 0, 0.08, 0, 7);                                            // post
+  const arm = cyl(g, 0.05, 0.05, 0.95, C.oak, 0, 1.12, 0, 6); arm.rotation.z = Math.PI / 2;   // arms
+  cyl(g, 0.17, 0.2, 0.55, C.thatch, 0, 0.85, 0, 8);                                          // straw torso
+  cyl(g, 0.19, 0.19, 0.07, C.leather, 0, 0.95, 0, 8); cyl(g, 0.19, 0.19, 0.07, C.leather, 0, 1.18, 0, 8);
+  ball(g, 0.17, C.thatch, 0, 1.62, 0, 1);                                                    // head
+  cyl(g, 0.12, 0.17, 0.1, C.iron, 0, 1.7, 0, 8);                                             // helmet rim
+  ball(g, 0.05, C.wool, 0, 1.8, 0, 0);
+  const sh = cyl(g, 0.2, 0.2, 0.04, C.woolBlue, 0.0, 0.95, 0.2, 10); sh.rotation.x = Math.PI / 2;  // shield
+  ball(g, 0.05, C.gold, 0, 0.95, 0.24, 0);
+  const sw = box(g, 0.05, 0.7, 0.025, C.ironLight, 0.5, 0.78, 0.12, 0.005); sw.rotation.z = 0.2;   // practice blade leaning on it
+  return g;
+}
+
 // ---- scenery ---------------------------------------------------------------
 
 export function tree(scale = 1) {

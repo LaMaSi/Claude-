@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { startHouse } from './data/startHouse.js';
 import { FAMILY } from './data/family.js';
+import { generateHousehold } from './data/generator.js';
 import { Sim } from './sim/sim.js';
 import { buildWorld } from './render/world.js';
 import { createLighting } from './render/daynight.js';
@@ -20,7 +21,12 @@ document.body.prepend(renderer.domElement);
 const scene = new THREE.Scene();
 const world = buildWorld(scene, startHouse);
 const updateLighting = createLighting(scene, renderer);
-const sim = new Sim(startHouse, FAMILY);
+// A fresh random household every visit. ?seed=abc replays one; ?family=1 loads the hand-written Sam / Maya / Robin family.
+const params = new URLSearchParams(location.search);
+const seed = params.get('seed') || Math.random().toString(36).slice(2, 8);
+const people = params.has('family') ? FAMILY : generateHousehold(seed);
+if (!params.has('family') && !params.has('seed')) { params.set('seed', seed); history.replaceState(null, '', `?${params}`); }
+const sim = new Sim(startHouse, people);
 const view = createCharactersView(scene, sim);
 
 const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 200);
@@ -29,7 +35,6 @@ const BASE = new THREE.Vector3(0, 1.0, 0.8);
 camera.lookAt(BASE);
 
 // ---- selection / UI ------------------------------------------------------------
-const params = new URLSearchParams(location.search);
 function select(id, focus = true) {
   sim.select(id);
   if (focus) { const c = sim.char(id); rig.focus(c.x, c.z); }
@@ -78,7 +83,7 @@ function onTap(cx, cy) {
   }
 }
 const rig = createCameraRig(camera, renderer.domElement, BASE, { onTap });
-select('sam', false);
+select(sim.chars[0].id, false);
 
 const UI_TOP = 52, UI_BOTTOM = 112; // px reserved for the clock and the (closed) dock
 const dock = document.getElementById('dock');
@@ -140,4 +145,5 @@ window.__pixel = pixel;
 const pxBtn = document.getElementById('pxbtn');
 pxBtn.addEventListener('click', () => { pixel.enabled = !pixel.enabled; pxBtn.classList.toggle('on', pixel.enabled); });
 pxBtn.classList.toggle('on', pixel.enabled);
-window.__ready = true; window.__sim = sim; window.__rig = rig; window.__select = select;
+document.getElementById('dicebtn').addEventListener('click', () => { params.set('seed', Math.random().toString(36).slice(2, 8)); params.delete('family'); location.search = params.toString(); });
+window.__ready = true; window.__seed = seed; window.__people = people; window.__sim = sim; window.__rig = rig; window.__select = select;

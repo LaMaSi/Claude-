@@ -10,7 +10,7 @@ const prod = (c, fn) => c.traits.reduce((m, t) => m * (fn(TRAITS[t]) ?? 1), 1);
 export const decayMult = (c, need) => prod(c, (t) => t.decay?.[need]);
 const skillGain = (c) => prod(c, (t) => t.skillGain);
 const relGain = (c) => prod(c, (t) => t.relGain);
-const NEED_OF_TAG = { music: 'fun', reading: 'fun', tales: 'fun', cooking: 'hunger', eating: 'hunger', gardening: 'fun', bathing: 'hygiene', sleeping: 'sleep', resting: 'sleep', together: 'social', socializing: 'social' };
+const NEED_OF_TAG = { music: 'fun', reading: 'fun', tales: 'fun', cooking: 'hunger', eating: 'hunger', gardening: 'fun', bathing: 'hygiene', sleeping: 'sleep', resting: 'sleep', together: 'social', socializing: 'social', fishing: 'fun', 'sword-fighting': 'fun', painting: 'fun' };
 
 export function log(c, sim, text, icon = '•') { c.history.push({ date: dateText(sim.date), icon, text, live: true }); }
 

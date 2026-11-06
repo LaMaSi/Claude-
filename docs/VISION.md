@@ -26,7 +26,9 @@ Played to relax at night: warm candlelight, a quiet world, small human dramas.
 
 ## What exists today (prototype)
 - Fixed-camera low-poly diorama, medieval cottage, day/night with night as the hero look.
-- A family of three with: needs (hunger, social, hygiene, fun, rest), mood, **traits** that change how needs drain and what they choose,
+- **Random households**: `src/data/generator.js` builds a whole household (couple / single parent / siblings, with children) from a seed: names, looks, traits, tastes, skills, jobs, bios, relationships, goals, dreams and history. `?seed=abc` replays one, 🎲 rolls a new one, `?family=1` loads the hand-written Sam/Maya/Robin.
+- Every activity tag has at least one object (fishing pond, easel, training dummy exist as furniture but are not placed in the starting cottage yet).
+- A household of people with: needs (hunger, social, hygiene, fun, rest), mood, **traits** that change how needs drain and what they choose,
   **likes/dislikes** that steer behaviour and mood, **skills** trained by doing, **wishes** that appear and are fulfilled,
   **goals** with progress, **relationships** that grow or strain, an **occupation** (data only), and a **history** that records life events.
 - A parametric character look system (20-variant showcase page).

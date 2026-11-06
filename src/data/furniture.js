@@ -31,6 +31,13 @@ export const FURNITURE = {
     use: { activity: 'Reading', pose: 'stand', anim: 'forward', slots: [{ x: 0, z: 0.5 }], approach: [0, 0.9], face: PI } },
   chest: { name: 'Chest', footprint: [1.0, 0.55], needs: {} },
   barrel: { name: 'Barrel', footprint: [0.65, 0.65], needs: {} },
+  // Not placed in the starting house yet: every activity tag needs at least one object that provides it.
+  pond: { name: 'Fishing pond', footprint: [2.0, 1.7], tags: ['fishing'], trains: 'fishing', needs: { fun: 0.8, hunger: 0.1 }, outdoor: true,
+    use: { activity: 'Fishing', pose: 'stand', anim: 'forward', slots: [{ x: -0.5, z: 1.15 }, { x: 0.5, z: 1.15 }], approach: [0, 1.55], relX: true, face: PI } },
+  easel: { name: 'Easel', footprint: [0.8, 0.7], tags: ['painting'], trains: 'painting', needs: { fun: 0.9, social: 0.05 },
+    use: { activity: 'Painting', pose: 'stand', anim: 'forward', slots: [{ x: 0, z: 0.6 }], approach: [0, 1.0], face: PI } },
+  dummy: { name: 'Training dummy', footprint: [0.7, 0.7], tags: ['sword-fighting'], trains: 'fighting', needs: { fun: 0.6 }, 
+    use: { activity: 'Practising swordplay', pose: 'stand', anim: 'raise', slots: [{ x: 0, z: 0.85 }], approach: [0, 1.25], face: PI } },
   rug: { name: 'Woven rug', footprint: [2.4, 2.4], needs: {}, floorDecor: true },
   banner: { name: 'Banner', footprint: [0.9, 0.05], needs: {}, wallMounted: true },
 };
