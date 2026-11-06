@@ -35,7 +35,7 @@ export const startHouse = {
     { def: 'plant',       x: 0.6,  z: 2.55,  rot: 0 },
   ],
   // Walkable area for people (island minus fence). Walls/furniture are blocked separately.
-  bounds: { x0: -7.4, x1: 7.4, z0: -6.2, z1: 5.8 },
+  bounds: { x0: -7.4, x1: 7.4, z0: -6.0, z1: 5.8 },
   // r = blocking radius at ground level (0 = purely decorative)
   scenery: [
     { type: 'tree', x: 6.8, z: -3.8, s: 1.5, r: 0.3 }, { type: 'tree', x: 7.4, z: 0.5, s: 1.2, r: 0.25 },
@@ -48,6 +48,7 @@ export const startHouse = {
     { type: 'haystack', x: -6.4, z: 3.7, s: 1.1, r: 0.7 },
     { type: 'barrel', x: -4.7, z: 1.15, s: 1, r: 0.35 },
     { type: 'veg', x: 6.0, z: -1.7, s: 1, r: 0 },
+    { type: 'lantern', x: -5.0, z: 3.2, s: 1, r: 0.2 }, { type: 'lantern', x: 5.6, z: 4.6, s: 1, r: 0.2 },
     ...[[-3.6, 4.7], [3.5, 4.8], [1.8, 4.5], [-5.4, 0.2]].map(([x, z]) => ({ type: 'flowers', x, z, s: 1, r: 0 })),
   ],
 };

@@ -5,5 +5,5 @@ export const MODELS = {
   bookshelf: M.bookshelf, rug: M.rug, banner: M.banner, chest: M.chest, barrel: M.barrel,
 };
 export const SCENERY = {
-  tree: M.tree, pine: M.pine, bush: M.bush, flowers: () => M.flowers(), well: M.well, haystack: M.haystack, veg: M.vegPatch, barrel: () => M.barrel(),
+  tree: M.tree, pine: M.pine, bush: M.bush, flowers: () => M.flowers(), well: M.well, haystack: M.haystack, veg: M.vegPatch, lantern: M.lantern, barrel: () => M.barrel(),
 };

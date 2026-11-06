@@ -18,7 +18,7 @@ document.body.prepend(renderer.domElement);
 
 const scene = new THREE.Scene();
 const world = buildWorld(scene, startHouse);
-const updateLighting = createLighting(scene);
+const updateLighting = createLighting(scene, renderer);
 const sim = new Sim(startHouse, FAMILY);
 const view = createCharactersView(scene, sim);
 
@@ -94,11 +94,11 @@ resize();
 
 // ---- time of day -------------------------------------------------------------
 const slider = document.getElementById('time'), clock = document.getElementById('clock'), playBtn = document.getElementById('play');
-let hour = parseFloat(params.get('t') ?? '14'), auto = false;
+let hour = parseFloat(params.get('t') ?? '21.5'), auto = false;
 slider.value = hour;
 slider.addEventListener('input', () => { hour = parseFloat(slider.value); });
 playBtn.addEventListener('click', () => { auto = !auto; playBtn.textContent = auto ? 'Pause' : 'Auto'; });
-const fmt = (h) => `${String(Math.floor(h) % 24).padStart(2, '0')}:${String(Math.floor((h % 1) * 60)).padStart(2, '0')}`;
+const fmt = (h) => `${h > 6 && h < 19.5 ? '☀' : '☾'} ${String(Math.floor(h) % 24).padStart(2, '0')}:${String(Math.floor((h % 1) * 60)).padStart(2, '0')}`;
 
 // ---- main loop (with a simple adaptive quality fallback for slow phones) -----
 let last = performance.now(), ema = 16, quality = 0, slowFor = 0;
@@ -118,7 +118,6 @@ function frame(now) {
   sim.update(dt * (+params.get('speed') || 1));
   view.update(dt, now / 1000, sim.selectedId);
   rig.update(dt);
-  for (const c of world.clouds) { c.position.x += dt * 0.25; if (c.position.x > 20) c.position.x = -20; }
   if (markerT < 1) { markerT += dt / 0.7; marker.material.opacity = (1 - markerT) * 0.9; marker.scale.setScalar(1 + markerT * 1.2); }
   ui.update(dt);
   renderer.render(scene, camera);

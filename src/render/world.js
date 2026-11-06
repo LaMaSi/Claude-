@@ -39,6 +39,7 @@ const tb = (g, w, h, d, color, x, y, z, r = 0.02) => { const m = slab(w, h, d, c
 // exposed timber framing, shuttered windows and an open plank door.
 function buildWall(parent, axis, fixed, from, to, H, openings, thick = 0.24) {
   const g = new THREE.Group();
+  if (axis === 'z') H -= 0.03; // corner overlap: the two walls' tops are never coplanar
   if (axis === 'x') g.position.set(0, 0, fixed); else { g.position.set(fixed, 0, 0); g.rotation.y = -Math.PI / 2; }
   const inside = axis === 'x' ? 1 : -1;
   const ops = openings.slice().sort((a, b) => a.center - b.center);
@@ -52,9 +53,10 @@ function buildWall(parent, axis, fixed, from, to, H, openings, thick = 0.24) {
     cur = b;
   }
   pieces.push([cur, to, 0, H]);
+  const TOP = H - 0.08; // plaster/stone stop inside the top plate so their tops are hidden (no coplanar faces)
   const add = (a, b, y0, y1, color) => {
     if (b - a < 0.01 || y1 - y0 < 0.01) return;
-    tb(g, b - a + 0.0, y1 - y0, thick, color, (a + b) / 2, y0, 0, 0.03);
+    tb(g, b - a, Math.min(y1, TOP) - y0, thick, color, (a + b) / 2, y0, 0, 0.03);
   };
   for (const [a0, b, y0, y1] of pieces) {
     const a = a0 === from ? a0 - thick / 2 : a0;
@@ -63,12 +65,12 @@ function buildWall(parent, axis, fixed, from, to, H, openings, thick = 0.24) {
     else { add(a, b, y0, STONE_H, C.stone); add(a, b, STONE_H, y1, C.plaster); }
   }
   // timber: top plate, sill beam, posts, braces
-  tb(g, to - from + thick, 0.16, thick + 0.08, C.timber, (from + to) / 2 - 0.0, H - 0.16, 0, 0.02);
-  tb(g, to - from + thick, 0.1, thick + 0.06, C.timber, (from + to) / 2, STONE_H, 0, 0.02);
+  tb(g, to - from + thick + 0.1, 0.16, thick + 0.1, C.timber, (from + to) / 2, H - 0.16, 0, 0.02);
+  tb(g, to - from + thick, 0.12, thick + 0.06, C.timber, (from + to) / 2, STONE_H - 0.06, 0, 0.02);
   const posts = [from - thick / 2 + 0.07, to];
   for (const o of ops) posts.push(o.center - o.width / 2 - 0.05, o.center + o.width / 2 + 0.05);
   posts.sort((p, q) => p - q);
-  for (const u of posts) tb(g, 0.14, H - STONE_H, thick + 0.07, C.timber, u, STONE_H, 0, 0.02);
+  for (const u of posts) tb(g, 0.14, H - STONE_H - 0.1, thick + 0.07, C.timber, u, STONE_H, 0, 0.02);
   for (let i = 0; i < posts.length - 1; i++) {
     const a = posts[i] + 0.07, b = posts[i + 1] - 0.07, len = b - a;
     const hasOpening = ops.some((o) => o.center > a && o.center < b);
@@ -108,18 +110,33 @@ export function buildWorld(scene, house) {
   const { x0, x1, z0, z1, wallHeight } = house.room;
   const W = x1 - x0, D = z1 - z0;
 
-  // island
-  const island = new THREE.Group();
-  island.add(slab(16, 0.6, 13.5, C.grass, 0, -0.7, 0.2, 0.25));
-  island.add(slab(16.2, 0.9, 13.7, C.soil, 0, -1.7, 0.2, 0.3));
-  const under = new THREE.Mesh(new THREE.ConeGeometry(6.6, 3, 6), mat(0x87694b));
-  under.position.set(0, -4.1, 0.2); under.rotation.y = Math.PI / 6; under.scale.set(1.15, 1, 1);
-  under.rotation.x = Math.PI; island.add(under);
-  scene.add(island);
+  // ground: grass running out to a misty, wooded horizon (no floating island)
+  const island = new THREE.Group(); scene.add(island);
+  const ground = new THREE.Mesh(new THREE.PlaneGeometry(400, 400), mat(C.grass, { flatShading: false }));
+  ground.rotation.x = -Math.PI / 2; ground.position.y = -0.04; ground.receiveShadow = true; scene.add(ground);
+  let gs = 11; const grnd = () => (gs = (gs * 16807) % 2147483647) / 2147483647;
+  for (let i = 0; i < 70; i++) { // soft darker / lighter grass patches
+    const r = 1.2 + grnd() * 3.2, m = new THREE.Mesh(new THREE.CircleGeometry(r, 9), mat([0x84b46c, 0x93c078, 0x7fb06a][i % 3], { flatShading: false }));
+    m.rotation.x = -Math.PI / 2; m.position.set((grnd() - 0.5) * 70, -0.035 + (i % 3) * 0.002, (grnd() - 0.5) * 70); m.receiveShadow = true; scene.add(m);
+  }
+  const yard = { x0: -7.9, x1: 7.9, z0: -6.5, z1: 6.2 };
+  // surrounding woodland (beyond the fence; far trees skip shadows)
+  const inYard = (x, z) => x > yard.x0 - 1.3 && x < yard.x1 + 1.3 && z > yard.z0 - 1.3 && z < yard.z1 + 1.3;
+  let n = 0;
+  while (n < 90) {
+    const x = (grnd() - 0.5) * 80, z = (grnd() - 0.5) * 80;
+    if (inYard(x, z)) continue;
+    const k = grnd(), s0 = 1 + grnd() * 0.9;
+    let o;
+    if (k < 0.42) o = M.pine(s0 * 1.2); else if (k < 0.8) o = M.tree(s0); else if (k < 0.92) o = M.bush(s0 * 1.2); else { o = new THREE.Group(); const rk = new THREE.Mesh(new THREE.IcosahedronGeometry(0.5 * s0, 0), mat(C.stoneDark)); rk.position.y = 0.2; rk.scale.y = 0.7; o.add(rk); }
+    o.position.set(x, 0, z); o.rotation.y = grnd() * 6;
+    o.traverse((m) => { m.castShadow = false; });
+    scene.add(o); n++;
+  }
 
   // cobbled path: door -> west -> south to the gate
   let seed = 3; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
-  const cobble = (x, z, w, d) => { const s = slab(w, 0.05, d, rnd() > 0.5 ? C.cobble : C.stoneLight, x, -0.1, z, 0.04); s.rotation.y = (rnd() - 0.5) * 0.5; island.add(s); };
+  const cobble = (x, z, w, d) => { const s = slab(w, 0.05, d, rnd() > 0.5 ? C.cobble : C.stoneLight, x, -0.045, z, 0.04); s.rotation.y = (rnd() - 0.5) * 0.5; island.add(s); };
   for (let i = 0; i < 9; i++) for (const dz of [-0.3, 0.3]) cobble(-4.3 - i * 0.42, 2.2 + dz + (rnd() - 0.5) * 0.15, 0.36 + rnd() * 0.08, 0.5);
   for (let j = 0; j < 8; j++) for (const dx of [-0.3, 0.3]) cobble(-7.0 + dx + (rnd() - 0.5) * 0.1, 2.5 + j * 0.46, 0.5, 0.38 + rnd() * 0.08);
 
@@ -161,27 +178,50 @@ export function buildWorld(scene, house) {
   for (const sc of house.scenery) {
     const obj = SCENERY[sc.type](sc.s);
     obj.position.set(sc.x, 0, sc.z); obj.rotation.y = sc.type === 'flowers' ? sc.x : 0; scene.add(obj);
+    obj.traverse((o) => { if (o.userData.lampShade || o.userData.lampLight) world.lamps.push(o); });
   }
-  // wattle-and-stake fence along the front with a gate gap where the path leaves
-  for (let i = -7.2; i <= 7.3; i += 0.7) {
-    if (i > -7.4 && i < -6.4) continue;
-    const p = new THREE.Group(); M.box(p, 0.1, 0.62, 0.1, C.oakDark, 0, 0, 0, 0.02);
-    const tip = new THREE.Mesh(new THREE.ConeGeometry(0.075, 0.14, 5), mat(C.oakDark)); tip.position.y = 0.69; tip.castShadow = true; p.add(tip);
-    p.position.set(i, 0, 6.2); scene.add(p);
-  }
-  for (const [xa, xb] of [[-6.3, 7.4]]) for (const y of [0.22, 0.45]) {
-    const r = new THREE.Group(); M.box(r, xb - xa, 0.06, 0.05, C.oak, 0, y, 0, 0.02); r.position.set((xa + xb) / 2, 0, 6.2); scene.add(r);
+  // wattle-and-stake fence around the yard (instanced); gate gap on the front-left where the path leaves
+  const posts = [];
+  const side = (xa, za, xb, zb) => { const L = Math.hypot(xb - xa, zb - za), cnt = Math.round(L / 0.7); for (let i = 0; i <= cnt; i++) posts.push([xa + (xb - xa) * i / cnt, za + (zb - za) * i / cnt]); };
+  side(yard.x0, yard.z0, yard.x1, yard.z0); side(yard.x1, yard.z0, yard.x1, yard.z1);
+  side(yard.x1, yard.z1, yard.x0, yard.z1); side(yard.x0, yard.z1, yard.x0, yard.z0);
+  const gate = (x, z) => z > yard.z1 - 0.1 && x > -7.5 && x < -6.4;
+  const pts = posts.filter(([x, z]) => !gate(x, z));
+  const postM = new THREE.InstancedMesh(new THREE.BoxGeometry(0.1, 0.62, 0.1), mat(C.oakDark), pts.length);
+  const tipM = new THREE.InstancedMesh(new THREE.ConeGeometry(0.075, 0.14, 5), mat(C.oakDark), pts.length);
+  const mtx = new THREE.Matrix4();
+  pts.forEach(([x, z], i) => { mtx.makeTranslation(x, 0.31, z); postM.setMatrixAt(i, mtx); mtx.makeTranslation(x, 0.69, z); tipM.setMatrixAt(i, mtx); });
+  postM.castShadow = tipM.castShadow = true; postM.receiveShadow = true; scene.add(postM, tipM);
+  const rail = (xa, za, xb, zb, y) => {
+    const L = Math.hypot(xb - xa, zb - za), m = new THREE.Mesh(new THREE.BoxGeometry(L, 0.06, 0.05), mat(C.oak));
+    m.position.set((xa + xb) / 2, y, (za + zb) / 2); m.rotation.y = -Math.atan2(zb - za, xb - xa); m.castShadow = true; scene.add(m);
+  };
+  for (const y of [0.22, 0.45]) {
+    rail(yard.x0, yard.z0, yard.x1, yard.z0, y); rail(yard.x1, yard.z0, yard.x1, yard.z1, y);
+    rail(-6.3, yard.z1, yard.x1, yard.z1, y); rail(yard.x0, yard.z1, yard.x0, yard.z0, y);
+    rail(yard.x0, yard.z1, -7.5, yard.z1, y);
   }
 
-  // clouds
-  for (let i = 0; i < 4; i++) {
-    const c = new THREE.Group();
-    for (let j = 0; j < 4; j++) {
-      const b = new THREE.Mesh(new THREE.IcosahedronGeometry(0.8 + (j % 2) * 0.35, 1), mat(0xffffff, { emissive: 0xffffff, emissiveIntensity: 0.15 }));
-      b.position.set(j * 0.9 - 1.3, (j % 2) * 0.2, 0); b.scale.y = 0.65; c.add(b);
-    }
-    c.position.set(-14 + i * 9, 7 + (i % 2) * 2, -9 + (i % 3) * 3);
-    scene.add(c); world.clouds.push(c);
+  // fireflies (visible at night only)
+  const flies = [];
+  const flyGroup = new THREE.Group(); scene.add(flyGroup);
+  while (flies.length < 30) {
+    const x = (grnd() - 0.5) * 15, z = (grnd() - 0.5) * 12;
+    if (x > x0 - 0.5 && x < x1 + 0.5 && z > z0 - 0.5 && z < z1 + 0.5) continue;
+    const g = new THREE.Group();
+    const core = new THREE.Mesh(new THREE.IcosahedronGeometry(0.035, 0), new THREE.MeshBasicMaterial({ color: 0xe6ffa0, transparent: true }));
+    const halo = new THREE.Mesh(new THREE.IcosahedronGeometry(0.13, 1), new THREE.MeshBasicMaterial({ color: 0xb8ff70, transparent: true, opacity: 0.2, depthWrite: false }));
+    g.add(core, halo); flyGroup.add(g);
+    flies.push({ g, core, halo, x, y: 0.4 + grnd() * 1.3, z, ph: grnd() * 20 });
   }
+  world.fireflies = { update(t, night) {
+    flyGroup.visible = night > 0.3;
+    for (const f of flies) {
+      f.g.position.set(f.x + Math.sin(t * 0.4 + f.ph) * 0.9, f.y + Math.sin(t * 0.9 + f.ph) * 0.25, f.z + Math.cos(t * 0.35 + f.ph * 1.3) * 0.9);
+      const b = 0.25 + 0.75 * Math.max(0, Math.sin(t * 1.7 + f.ph * 3));
+      f.core.material.opacity = b * night; f.halo.material.opacity = 0.22 * b * night;
+    }
+  } };
+
   return world;
 }

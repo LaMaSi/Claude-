@@ -268,3 +268,17 @@ export function vegPatch(scale = 1) {
   g.scale.setScalar(scale);
   return g;
 }
+
+export function lantern(scale = 1) {
+  const g = new THREE.Group();
+  cyl(g, 0.05, 0.07, 1.7, C.oakDark, 0, 0, 0, 6);
+  box(g, 0.6, 0.06, 0.06, C.oak, 0.25, 1.62, 0, 0.02);
+  cyl(g, 0.008, 0.008, 0.18, C.iron, 0.5, 1.44, 0, 4);
+  box(g, 0.2, 0.04, 0.2, C.iron, 0.5, 1.4, 0, 0.01); box(g, 0.2, 0.04, 0.2, C.iron, 0.5, 1.66 - 0.2, 0, 0.01);
+  const glow = box(g, 0.14, 0.2, 0.14, C.fire, 0.5, 1.2, 0, 0.03, { emissive: 0xff9a2e, emissiveIntensity: 0 });
+  glow.userData.lampShade = true;
+  for (const sx of [-1, 1]) for (const sz of [-1, 1]) box(g, 0.025, 0.24, 0.025, C.iron, 0.5 + sx * 0.085, 1.18, sz * 0.085, 0.005);
+  const light = new THREE.PointLight(0xffb866, 0, 8, 1.5); light.position.set(0.5, 1.3, 0); light.userData.lampLight = true; g.add(light);
+  g.scale.setScalar(scale);
+  return g;
+}
