@@ -9,7 +9,7 @@ export function createCharactersView(scene, sim) {
   for (const c of sim.chars) {
     const p = buildPerson(c);
     p.root.userData.charId = c.id;
-    p.cur = Object.fromEntries(keys.map((k) => [k, 0])); p.cur.armZ = 0.06;
+    p.cur = Object.fromEntries(keys.map((k) => [k, 0])); p.cur.armZ = -0.12;
     p.phase = Math.random() * 6;
     scene.add(p.root);
     views.set(c.id, p);
@@ -20,7 +20,7 @@ export function createCharactersView(scene, sim) {
   ring.rotation.x = -Math.PI / 2; scene.add(ring);
 
   function targets(c, v, t, dt) {
-    const T = { legL: 0, legR: 0, armL: 0, armR: 0, armZ: 0.06, lie: 0, bob: 0, headX: 0 };
+    const T = { legL: 0, legR: 0, armL: 0, armR: 0, armZ: -0.12, lie: 0, bob: 0, headX: 0 };
     const breathe = Math.sin(t * 2 + v.phase);
     if (c.mode === 'walk') {
       v.phase += dt * c.speed * 5.2;
