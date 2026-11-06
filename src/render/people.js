@@ -4,7 +4,7 @@
 import * as THREE from 'three';
 import { box } from './models.js';
 import { C, mat } from './palette.js';
-import { HEAD_R, headGeometry, headMaterial } from './face.js';
+import { HEAD_R, headGeometry, headMaterial, headBottom } from './face.js';
 import { buildHair } from './hair.js';
 import { buildHat } from './headwear.js';
 import { buildFacialHair } from './facialhair.js';
@@ -210,7 +210,7 @@ function buildHuman({ look, scale = 1, headScale = 1 }) {
 
   // neck: bridges the chest and the head so the head never floats
   cyl(body, 0.052, 0.062, 0.14, skin, 0.96);
-  const head = new THREE.Group(); head.position.set(0, 1.17, 0); head.scale.setScalar(headScale); body.add(head);
+  const head = new THREE.Group(); head.position.set(0, Math.max(1.17, 0.99 + headBottom(L) * headScale), 0); head.scale.setScalar(headScale); body.add(head);
   buildFace(head, L); buildHair(head, L); buildHeadwear(head, L);
   parts.head = head;
   return { root: outer, pivot, parts };

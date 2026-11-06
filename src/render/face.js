@@ -20,6 +20,11 @@ const SHAPES = {
   chubby: { low: -0.07, lowPow: 0.9, up: 0, chinY: 0.0, cheek: 0.1 },
 };
 const ALIAS = { soft: 'chubby', pointy: 'heart' };
+// lowest point of the chin (head units, before headScale): lets the body keep the chin clear of the collar
+export function headBottom(L) {
+  const S = SHAPES[SHAPES[L.jaw] ? L.jaw : (ALIAS[L.jaw] ?? 'oval')];
+  return HEAD_R * L.headH * (S.flat ? S.flat : 1 + S.chinY);
+}
 const geoCache = new Map();
 export function headGeometry(L) {
   const shape = SHAPES[L.jaw] ? L.jaw : (ALIAS[L.jaw] ?? 'oval'), S = SHAPES[shape];

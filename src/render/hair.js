@@ -42,15 +42,15 @@ export function shell(o) {
   const elEq = PI / 2 + 0.12, yEq = cy + ry * Math.cos(elEq);
   for (let i = 0; i <= rows; i++) for (let j = 0; j <= cols; j++) {
     const az = (j / cols) * TAU - PI, sa = Math.sin(az), ca = Math.cos(az), u = i / rows;
-    const ye = yEnd(az);
+    const e0 = typeof el0 === 'function' ? el0(az) : el0, ye = yEnd(az);
     const elEnd = ye >= yEq ? Math.acos(clamp((ye - cy) / ry, -1, 1)) : elEq;
-    const elStop = Math.max(elEnd, el0 + 0.0001), drop = ye < yEq ? yEq - ye : 0, fd = drop > 0 ? 0.5 : 1;
+    const elStop = Math.max(elEnd, e0 + 0.0001), drop = ye < yEq ? yEq - ye : 0, fd = drop > 0 ? 0.5 : 1;
     let t = thick(az, u), gr = groove ? groove(az, u) : 0, x, y, z;
     const edge = 1 - sstep(u, 0.86, 1);
-    t = t * (0.2 + 0.8 * edge) + 0.002;
-    if (drop === 0 && elEnd <= el0 + 0.03) { t = -0.03; gr = 0; } // no hair here (bald front of a tonsure etc.): sink the open edge into the skull
+    t = t * (0.2 + 0.8 * edge) * (e0 > 0.01 ? Math.pow(sstep(u, 0, 0.85), 1.6) : 1) + 0.002;
+    if (drop === 0 && elEnd <= e0 + 0.03) { t = -0.03; gr = 0; } // no hair here (bald front of a tonsure etc.): sink the open edge into the skull
     if (u <= fd) {
-      const el = el0 + (elStop - el0) * (u / fd), se = Math.sin(el), ce = Math.cos(el);
+      const el = e0 + (elStop - e0) * (u / fd), se = Math.sin(el), ce = Math.cos(el);
       const nx = (se * sa) / (rx * rx), ny = ce / (ry * ry), nz = (se * ca) / (rz * rz), nl = Math.hypot(nx, ny, nz) || 1, tt = t + gr;
       x = rx * se * sa + (nx / nl) * tt; y = cy + ry * ce + (ny / nl) * tt; z = rz * se * ca + (nz / nl) * tt;
     } else {
@@ -71,7 +71,7 @@ export function shell(o) {
     const a = i * W, b = i * W + cols, x = N.getX(a) + N.getX(b), y = N.getY(a) + N.getY(b), z = N.getZ(a) + N.getZ(b), l = Math.hypot(x, y, z) || 1;
     N.setXYZ(a, x / l, y / l, z / l); N.setXYZ(b, x / l, y / l, z / l);
   }
-  if (el0 < 0.01) for (let j = 0; j <= cols; j++) N.setXYZ(j, 0, 1, 0);
+  if (typeof el0 === 'number' && el0 < 0.01) for (let j = 0; j <= cols; j++) N.setXYZ(j, 0, 1, 0);
   finish(g, color, (v) => shade[v]);
   return g;
 }
@@ -146,10 +146,16 @@ export function buildHairMeshes(L) {
     if (st === 'ponytail') add(tube([[0, 0.14, -0.2], [0, 0.12, -0.31], [0, -0.04, -0.36], [0, -0.26, -0.33], [0, -0.38, -0.3]], 0.075, 0.015, { twist: 1.5, rip: 0.06, color: c }));
     if (st === 'braid') add(tube([[0, 0.0, -0.18], [0, -0.14, -0.27], [0, -0.32, -0.29], [0, -0.5, -0.29]], 0.058, 0.04, { twist: 6, rip: 0.16, color: c }));
     if (st === 'braids') for (const s of [-1, 1]) add(tube([[s * 0.17, 0.02, -0.03], [s * 0.19, -0.12, -0.04], [s * 0.185, -0.3, -0.04], [s * 0.18, -0.46, -0.04]], 0.05, 0.036, { twist: 6, rip: 0.16, color: c }));
-    if (st === 'pigtails') for (const s of [-1, 1]) add(tube([[s * 0.2, 0.06, -0.02], [s * 0.27, -0.04, -0.03], [s * 0.3, -0.18, -0.02], [s * 0.28, -0.3, -0.02]], 0.07, 0.018, { twist: 1.2, rip: 0.06, color: c }));
+    if (st === 'pigtails') for (const s of [-1, 1]) add(tube((covered ? [[s * 0.2, -0.08, -0.02], [s * 0.235, -0.17, -0.03], [s * 0.25, -0.27, -0.02], [s * 0.24, -0.36, -0.02]] : [[s * 0.2, 0.06, -0.02], [s * 0.27, -0.04, -0.03], [s * 0.3, -0.18, -0.02], [s * 0.28, -0.3, -0.02]]), covered ? 0.055 : 0.07, 0.018, { twist: 1.2, rip: 0.06, color: c }));
   }
-  if (st === 'tonsure') sh({ el0: 1.12, yEnd: prof([[0, 0.3], [0.9, 0.3], [1.35, 0.0], [1.7, -0.03], [2.4, -0.07], [PI, -0.09]]), thick: () => 0.026, groove: grooveF(8, 0.005) });
-  if (st === 'receding') sh({ el0: 1.0, yEnd: prof([[0, 0.3], [1.15, 0.3], [1.4, 0.0], [1.7, -0.02], [2.4, -0.06], [PI, -0.08]]), thick: () => 0.022, groove: grooveF(8, 0.005) });
+  if (st === 'tonsure') { // monk's fringe: a wedge-shaped band, pointed at the temples, thicker at the back
+    const top = prof([[0, 1.5], [1.0, 1.42], [1.4, 1.2], [2.2, 1.04], [PI, 1.0]]), bot = prof([[0, 0.3], [1.0, 0.3], [1.3, 0.05], [1.7, -0.02], [2.4, -0.07], [PI, -0.09]]);
+    sh({ el0: top, yEnd: (az) => bot(az) - 0.02 * tips(az, 9) * sstep(Math.abs(az), 1.5, 2.2), thick: (az, u) => 0.022 + 0.012 * sstep(Math.abs(az), 1.4, 2.6), groove: grooveF(8, 0.005) });
+  }
+  if (st === 'receding') {
+    const top = prof([[0, 1.55], [1.1, 1.45], [1.45, 1.2], [2.0, 0.98], [PI, 0.8]]), bot = prof([[0, 0.3], [1.1, 0.3], [1.35, 0.06], [1.7, -0.02], [2.4, -0.06], [PI, -0.08]]);
+    sh({ el0: top, yEnd: (az) => bot(az) - 0.02 * tips(az, 9) * sstep(Math.abs(az), 1.5, 2.2), thick: () => 0.024, groove: grooveF(8, 0.004) });
+  }
   if (st === 'bald') sh({ el0: 1.3, yEnd: prof([[0, 0.3], [1.25, 0.3], [1.5, 0.04], [1.85, 0.3], [PI, 0.3]]), thick: () => 0.02 });
   return out;
 }
