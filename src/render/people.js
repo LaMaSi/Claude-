@@ -7,6 +7,7 @@ import { C, mat } from './palette.js';
 import { HEAD_R, headGeometry, headMaterial } from './face.js';
 import { buildHair } from './hair.js';
 import { buildHat } from './headwear.js';
+import { buildFacialHair } from './facialhair.js';
 
 const tint = (hex, amt) => { const c = new THREE.Color(hex); return amt < 0 ? c.lerp(new THREE.Color(0), -amt).getHex() : c.lerp(new THREE.Color(0xffffff), amt).getHex(); };
 function ball(parent, r, color, x, y, z, sx = 1, sy = 1, sz = 1, detail = 3) {
@@ -113,14 +114,7 @@ function buildFace(head, L) {
   if (L.nose === 'long') nose(0.05, 0.115, 0.06, -0.06, 0.12);
   if (L.nose === 'pointy') nose(0.04, 0.095, 0.07, -0.056, 0.3);
   if (L.nose === 'hook') nose(0.046, 0.08, 0.055, -0.052, 0.05, 0.04);
-  // facial hair
-  const fh = L.facial, fc = L.facialColor ?? L.hair;
-  if (fh === 'full') { ball(head, 0.17, fc, 0, -0.12, 0.05, hw, 0.85, 0.82, 1); for (const s of [-1, 1]) ball(head, 0.075, fc, s * 0.14 * hw, -0.02, 0.06, 0.7, 1.4, 0.8, 1); }
-  if (fh === 'long') { ball(head, 0.17, fc, 0, -0.12, 0.05, hw, 0.85, 0.82, 1); ell(head, 0.26 * hw, 0.56, 0.12, fc, 0, -0.45, 0.1); ell(head, 0.2, 0.3, 0.1, fc, 0, -0.76, 0.1); }
-  if (fh === 'goatee') { const g = cone(head, 0.06, 0.16, fc, 0, -0.19, 0.12); g.rotation.x = Math.PI; }
-  if (fh === 'mustache' || fh === 'curly' || fh === 'full' || fh === 'long') for (const s of [-1, 1]) { const m = ball(head, 0.035, fc, 0, 0, 0, 1.5, 0.6, 0.8, 2); put(m, s * 0.034, -0.078, 0.016); m.rotation.z = s * -0.25; }
-  if (fh === 'curly') for (const s of [-1, 1]) ball(head, 0.022, fc, s * 0.078, -0.06, zAt(0.078, -0.06) + 0.01, 1, 1, 1, 1);
-  if (fh === 'sideburns' || fh === 'mutton') for (const s of [-1, 1]) box(head, 0.045, fh === 'mutton' ? 0.14 : 0.1, 0.07, fc, s * 0.17 * hw, -0.06, 0.04, 0.02);
+  buildFacialHair(head, L, zAt);
 
   // accessories
   for (const a of L.accessories) {
