@@ -185,7 +185,7 @@ function buildHuman({ look, scale = 1, headScale = 1 }) {
     ring(body, 0.23 * g, 0.03, C.cream, 0.52, 1, 0.82); collar(tint(shirt, -0.2), 1.08);
     sleeve = 'wide'; sleeveW = 0.16;
   } else if (outfit === 'smith') {
-    upper(shirt); skirt(shirt, 0.2, 0.25, 0.34, 0.24);
+    upper(shirt); skirt(shirt, 0.2, 0.25, 0.34, 0.24); collar(shirt, 1.05);
     box(body, 0.34 * g, 0.7, 0.06, C.leather, 0, 0.1, 0.16, 0.028); box(body, 0.27 * g, 0.24, 0.05, C.leather, 0, 0.66, 0.15, 0.02);
     sleeve = 'rolled';
   } else if (outfit === 'jerkin') {
@@ -217,8 +217,9 @@ function buildHuman({ look, scale = 1, headScale = 1 }) {
   }
 
   // neck: bridges the chest and the head so the head never floats
-  cyl(body, 0.052, 0.062, 0.14, skin, 0.96);
-  const head = new THREE.Group(); head.position.set(0, Math.max(1.17, 0.99 + headBottom(L) * headScale), 0); head.scale.setScalar(headScale); body.add(head);
+  const hy = Math.max(1.13, 0.93 + headBottom(L) * headScale), chinY = hy - headBottom(L) * headScale;
+  cyl(body, 0.052, 0.064, chinY + 0.05 - 0.93, skin, 0.93); // neck reaches up into the chin
+  const head = new THREE.Group(); head.position.set(0, hy, 0); head.scale.setScalar(headScale); body.add(head);
   buildFace(head, L); buildHair(head, L); buildHeadwear(head, L);
   parts.head = head;
   return { root: outer, pivot, parts };
