@@ -98,6 +98,7 @@ function buildFace(head, L) {
   const put = (m, x, y, dz = 0.004) => { m.position.set(x, y, zAt(x, y) + dz); m.rotation.y = Math.asin(THREE.MathUtils.clamp(x / (R * hw), -0.9, 0.9)); return m; };
   const ink = C.black;
   const skull = new THREE.Mesh(headGeometry(L), headMaterial(L)); skull.castShadow = true; skull.receiveShadow = true; head.add(skull);
+  head.userData.skull = skull; head.userData.look = L; // so the animation layer can swap expressions
 
   // ears: a flattened shell with a darker inner hollow, set just behind the centre line of the head
   if (L.ears !== 'none') for (const s of [-1, 1]) {

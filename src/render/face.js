@@ -61,8 +61,17 @@ export function headGeometry(L) {
 // ---- painted face texture ------------------------------------------------------------------------------------------
 const W = 1024, H = 640;
 const texCache = new Map();
-export function headMaterial(L) {
-  const key = JSON.stringify([L.skin, L.headW, L.headH, L.eyes, L.eyeColor, L.eyeGap, L.eyeY, L.eyeSize, L.brows, L.browColor ?? L.hair,
+// Expressions override a few painted features. 'blink' only closes the eyes; mood expressions also change brows and mouth.
+export const EXPRESSIONS = {
+  neutral: {}, blink: { eyes: 'closed' },
+  happy: { eyes: 'happy', mouth: 'grin', blush: true }, content: { eyes: 'happy', mouth: 'smile' },
+  sad: { eyes: 'sleepy', brows: 'worried', mouth: 'frown' }, worried: { brows: 'worried', mouth: 'o' },
+  sleep: { eyes: 'closed', brows: 'none', mouth: 'tiny' }, surprised: { eyes: 'big', brows: 'arched', mouth: 'o' },
+  angry: { brows: 'angry', mouth: 'frown', eyes: 'narrow' }, talk: { mouth: 'open' }, tired: { eyes: 'sleepy', mouth: 'flat' },
+};
+export function headMaterial(L0, expr = 'neutral') {
+  const L = EXPRESSIONS[expr] && expr !== 'neutral' ? { ...L0, ...EXPRESSIONS[expr] } : L0;
+  const key = JSON.stringify([expr, L.eyes, L.skin, L.headW, L.headH, L.eyes, L.eyeColor, L.eyeGap, L.eyeY, L.eyeSize, L.brows, L.browColor ?? L.hair,
     L.nose, L.mouth, L.eyeTilt ?? 0, L.blush, L.freckles, L.accessories.includes('eyepatch'), L.accessories.includes('scar')]);
   if (!texCache.has(key)) {
     const tex = new THREE.CanvasTexture(paintFace(L));
@@ -120,6 +129,8 @@ function paintFace(L) {
       ell(cx, ey - 0.004, 0.03 * es, 0.026 * es, ink); x.fillStyle = css(skin); x.fillRect(cx - 0.04, ey + 0.004, 0.08, 0.04); // flat upper lid cuts the dot
       hl(0.007 * es, -0.005, 0.0055 * es);
       stroke(0.009, ink); x.beginPath(); x.moveTo(cx - 0.036 * es, ey + 0.004); x.lineTo(cx + 0.036 * es, ey + 0.004); x.stroke();
+    } else if (eye === 'closed') {
+      stroke(0.011, ink); x.beginPath(); x.ellipse(cx, ey + 0.012, 0.03 * es, 0.018 * es, 0, 1.08 * Math.PI, 1.92 * Math.PI); x.stroke();
     } else if (eye === 'narrow') {
       stroke(0.014, ink); x.beginPath(); x.moveTo(cx - 0.036 * es, ey + s * 0.004); x.lineTo(cx + 0.036 * es, ey - s * 0.004); x.stroke();
     } else if (eye === 'happy') {
