@@ -57,6 +57,7 @@ export function createCharactersView(scene, sim) {
         parts.armL.rotation.z = cur.armZ; parts.armR.rotation.z = -cur.armZ;
         parts.body.position.y = cur.bob; parts.head.rotation.x = cur.headX;
         v.pivot.rotation.x = -Math.PI / 2 * cur.lie;
+        if (parts.tail) parts.tail.rotation.y = Math.sin(t * 3 + v.phase) * 0.3; // non-human species hook
         v.root.position.set(c.x, c.y, c.z); v.root.rotation.y = c.yaw;
       }
       const sel = sim.char(selectedId);

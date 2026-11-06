@@ -1,7 +1,7 @@
 // Camera rig: fixed angle, pinch/wheel zoom about the touch point, one-finger pan, tap detection.
 import * as THREE from 'three';
 
-export function createCameraRig(camera, dom, base, { minZoom = 1, maxZoom = 4.5, onTap } = {}) {
+export function createCameraRig(camera, dom, base, { minZoom = 0.8, maxZoom = 4.5, onTap } = {}) {
   const target = base.clone(), goal = base.clone();
   const offset = camera.position.clone().sub(base);
   const ray = new THREE.Raycaster(), plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0), tmp = new THREE.Vector3();
@@ -17,7 +17,7 @@ export function createCameraRig(camera, dom, base, { minZoom = 1, maxZoom = 4.5,
     return ray.ray.intersectPlane(plane, tmp) ? tmp.clone() : null;
   }
   function clamp(v) {
-    const lim = (1 - 1 / zoom) * 7.5;
+    const lim = Math.max(0, (1 - 1 / zoom) * 7.5);
     v.x = THREE.MathUtils.clamp(v.x, base.x - lim, base.x + lim);
     v.z = THREE.MathUtils.clamp(v.z, base.z - lim * 0.9, base.z + lim * 0.9);
   }

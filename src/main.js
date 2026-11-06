@@ -6,6 +6,8 @@ import { buildWorld } from './render/world.js';
 import { createLighting } from './render/daynight.js';
 import { createCharactersView } from './render/charactersView.js';
 import { createCameraRig } from './input.js';
+import { renderPortraits } from './render/portraits.js';
+import { createUI } from './ui.js';
 
 const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
@@ -25,23 +27,13 @@ camera.position.set(20, 18.5, 20);
 const BASE = new THREE.Vector3(0, 1.0, 0.8);
 camera.lookAt(BASE);
 
-// ---- selection / picking ----------------------------------------------------
+// ---- selection / UI ------------------------------------------------------------
 const params = new URLSearchParams(location.search);
-const chips = new Map(), statusEl = document.getElementById('status');
-function select(id, focus = false) {
+function select(id, focus = true) {
   sim.select(id);
-  for (const [cid, el] of chips) el.classList.toggle('sel', cid === id);
   if (focus) { const c = sim.char(id); rig.focus(c.x, c.z); }
 }
-const hex = (n) => '#' + n.toString(16).padStart(6, '0');
-for (const c of sim.chars) {
-  const el = document.createElement('button');
-  el.className = 'chip';
-  el.innerHTML = `<span class="dot" style="background:${hex(c.look.skin)}; box-shadow: inset 0 -9px 0 ${hex(c.look.shirt)}"></span>${c.name}`;
-  el.addEventListener('click', () => select(c.id, true));
-  document.getElementById('family').append(el);
-  chips.set(c.id, el);
-}
+const ui = createUI({ sim, portraits: renderPortraits(sim.chars), onSelect: (id) => select(id) });
 
 const raycaster = new THREE.Raycaster();
 const marker = new THREE.Mesh(new THREE.RingGeometry(0.2, 0.3, 28), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0, depthWrite: false }));
@@ -60,7 +52,7 @@ function onTap(cx, cy) {
     const d = Math.hypot((v.x - nx) * r.width / 2, (v.y - ny) * r.height / 2);
     if (d < best) { best = d; hit = c; }
   }
-  if (hit) { select(hit.id); return; }
+  if (hit) { select(hit.id, false); return; }
   const sel = sim.char(sim.selectedId);
   if (!sel) return;
   // 2) furniture
@@ -83,15 +75,18 @@ function onTap(cx, cy) {
   }
 }
 const rig = createCameraRig(camera, renderer.domElement, BASE, { onTap });
-select('sam');
+select('sam', false);
 
+const UI_TOP = 52, UI_BOTTOM = 112; // px reserved for the clock and the portrait row
 function resize() {
   const w = window.innerWidth, h = window.innerHeight;
   renderer.setSize(w, h);
-  const aspect = w / h, needW = 22, needH = 15.5;
-  const size = Math.max(needH, needW / aspect);
+  const hEff = Math.max(200, h - UI_TOP - UI_BOTTOM), needW = w < h ? 17 : 22, needH = 15.5;
+  const sizeEff = Math.max(needH, needW * hEff / w);      // world height that must fit in the free band
+  const size = sizeEff * h / hEff, aspect = w / h;
   camera.left = -size * aspect / 2; camera.right = size * aspect / 2;
   camera.top = size / 2; camera.bottom = -size / 2;
+  camera.setViewOffset(w, h, 0, (UI_BOTTOM - UI_TOP) / 2, w, h); // lift the scene into the free band
   rig.resize();
 }
 window.addEventListener('resize', resize);
@@ -118,15 +113,14 @@ function frame(now) {
   }
   if (auto) { hour = (hour + dt * 0.5) % 24; slider.value = hour; }
   clock.textContent = fmt(hour);
-  updateLighting(hour, world);
+  updateLighting(hour, world, now / 1000);
   sim.hour = hour;
   sim.update(dt * (+params.get('speed') || 1));
   view.update(dt, now / 1000, sim.selectedId);
   rig.update(dt);
   for (const c of world.clouds) { c.position.x += dt * 0.25; if (c.position.x > 20) c.position.x = -20; }
   if (markerT < 1) { markerT += dt / 0.7; marker.material.opacity = (1 - markerT) * 0.9; marker.scale.setScalar(1 + markerT * 1.2); }
-  const sel = sim.char(sim.selectedId);
-  statusEl.textContent = sel ? `${sel.name} · ${sel.mode === 'walk' ? 'Walking' : sel.activity || 'Idle'}` : 'Tap a person';
+  ui.update(dt);
   renderer.render(scene, camera);
   requestAnimationFrame(frame);
 }

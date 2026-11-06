@@ -29,7 +29,7 @@ export function createLighting(scene) {
   scene.fog = new THREE.Fog(0xffffff, 40, 80);
   scene.background = new THREE.Color();
 
-  const update = function (hour, world) {
+  const update = function (hour, world, time = 0) {
     const sky = sample(SKY, hour);
     scene.background.copy(sky); scene.fog.color.copy(sky);
     // sun arc: rises 6, sets 19 ; moon takes over at night
@@ -49,7 +49,9 @@ export function createLighting(scene) {
       if (l.isLight) l.intensity = night * 9;
       else l.material.emissiveIntensity = night * 1.4;
     }
-    for (const t2 of world.tvScreens) t2.material.emissiveIntensity = night * 0.9 + 0.25;
+    const fl = 0.88 + 0.12 * Math.sin(time * 13) * Math.sin(time * 7.3) + 0.05 * Math.sin(time * 31);
+    for (const l of world.fires.lights) l.intensity = (1.4 + night * 6.5) * fl;
+    for (const f of world.fires.flames) { f.scale.set(1, 0.85 + 0.3 * fl, 1); f.material.emissiveIntensity = 1.2 + 0.8 * fl; }
     for (const g of world.windowGlass) { g.material.opacity = 0.3 + night * 0.25; g.material.emissiveIntensity = night * 0.9; }
     return night;
   };
