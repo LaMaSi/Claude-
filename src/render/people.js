@@ -225,63 +225,70 @@ function buildHuman({ look, scale = 1, headScale = 1 }) {
   return { root: outer, pivot, parts };
 }
 
-// ---- Rayman-style bodies (prototype): floating hands and feet, no arms, no shoulders, no neck ---------------------
-// style 'A' pure: head floats over an egg torso, spherical hands, bare floating boots
-// style 'B' glove: head tucked into the torso, puffy cartoon gloves with cuffs, stub legs, scarf
-// style 'C' garment: one bell-shaped garment from chin to hem, head sits in a collar roll, mitten hands, boots peek out
-function glove(arm, color, cuff, y, side, kind) {
-  const g = new THREE.Group(); g.position.set(side * 0.05, y, 0.02); arm.add(g);
-  if (kind === 'sphere') { ball(g, 0.075, color, 0, 0, 0, 1, 1, 1, 3); return; }
-  ell(g, 0.15, 0.13, 0.12, color, 0, 0, 0, 22);                                   // puffy palm
-  const t = ell(g, 0.065, 0.1, 0.065, color, side * 0.085, 0.01, 0.03, 14); t.rotation.z = side * 0.9; // thumb
-  if (kind === 'glove') for (const dx of [-0.045, 0, 0.045]) { const f = ell(g, 0.05, 0.1, 0.05, color, dx, -0.095, 0.01, 12); f.rotation.z = dx * 3; }
-  ring(g, 0.062, 0.028, cuff, 0.085, 1, 1);                                          // cuff in the sleeve colour
+// ---- Rayman-style body: a shaped garment, floating sphere hands, no arms, legs or neck -----------------------------
+// The head sinks into a rolled collar; the garment hem hovers just above the ground. Silhouette comes from the outfit.
+const GARMENT = { // [radius, y] profiles (top -> hem); lathe, scaled by build and squashed front-to-back
+  short: [[0, 1.03], [0.1, 1.0], [0.19, 0.93], [0.235, 0.78], [0.225, 0.58], [0.25, 0.4], [0.275, 0.2], [0.28, 0.12], [0, 0.1]],
+  bell: [[0, 1.03], [0.1, 1.0], [0.19, 0.93], [0.23, 0.78], [0.22, 0.6], [0.28, 0.38], [0.34, 0.18], [0.35, 0.12], [0, 0.1]],
+  long: [[0, 1.03], [0.1, 1.0], [0.19, 0.93], [0.24, 0.78], [0.235, 0.6], [0.29, 0.4], [0.35, 0.2], [0.36, 0.12], [0, 0.1]],
+};
+const garmentGeo = new Map();
+function garment(parent, g, color, key, k = 1, zs = 0.82) {
+  let geo = garmentGeo.get(key);
+  if (!geo) { geo = new THREE.LatheGeometry(new THREE.SplineCurve(GARMENT[key].map(([r, y]) => new THREE.Vector2(r, y))).getPoints(34).reverse(), 32); garmentGeo.set(key, geo); }
+  const m = new THREE.Mesh(geo, smooth(color)); m.scale.set(g * k, 1, zs * k); m.castShadow = m.receiveShadow = true; parent.add(m); return m;
 }
-function buildRay(style, { look, scale = 1, headScale = 1 }) {
+// a band of the garment surface (between two heights, a slice of the angle around it) lifted slightly off the cloth:
+// aprons, bibs, vests, front trims and cloaks that wrap the body instead of poking out of it
+function panel(parent, g, color, key, yBot, yTop, phiStart, phiLen, k = 1.035, zs = 0.82) {
+  const crv = new THREE.SplineCurve(GARMENT[key].map(([r, y]) => new THREE.Vector2(r, y))).getPoints(60).filter((q) => q.y >= yBot && q.y <= yTop).reverse();
+  const geo = new THREE.LatheGeometry(crv, Math.max(8, Math.round(phiLen * 8)), phiStart, phiLen);
+  const m = new THREE.Mesh(geo, mat(color, { flatShading: false, side: THREE.DoubleSide })); m.scale.set(g * k, 1, zs * k); m.castShadow = m.receiveShadow = true; parent.add(m); return m;
+}
+const FRONT = (half) => [-half, half * 2], BACK = (half) => [Math.PI - half, half * 2];
+function buildRay({ look, scale = 1, headScale = 1 }) {
   const L = { ...DEFAULT_LOOK, ...look };
   if (look.beard && !look.facial) L.facial = 'full';
-  const { skin, shirt, pants } = L, g = L.build;
+  const { skin, shirt, outfit, build: g } = L, trim = L.trim ?? C.gold;
   const outer = new THREE.Group(), pivot = new THREE.Group(); pivot.scale.setScalar(scale); outer.add(pivot);
-  const parts = {}, boot = C.leather, glv = style === 'A' ? skin : C.cream;
-  const hs = headScale * (style === 'A' ? 1.12 : 1.08);
-  for (const [name, sx] of [['legL', -1], ['legR', 1]]) {
-    const leg = new THREE.Group(); leg.position.set(sx * 0.12 * g, 0.5, 0); pivot.add(leg);
-    if (style === 'A') { ell(leg, 0.17, 0.16, 0.26, boot, 0, -0.36, 0.04, 20); }
-    if (style === 'B') { taper(leg, 0.065, 0.055, 0.2, pants, 0, -0.17, 0); ell(leg, 0.17, 0.17, 0.27, boot, 0, -0.37, 0.04, 20); }
-    if (style === 'C') { ell(leg, 0.16, 0.14, 0.24, boot, 0, -0.38, 0.045, 20); }
-    parts[name] = leg;
-  }
+  const parts = { legL: new THREE.Group(), legR: new THREE.Group() }; // legs are not drawn; kept so the animation layer still works
+  parts.legL.position.set(-0.1, 0.5, 0); parts.legR.position.set(0.1, 0.5, 0); pivot.add(parts.legL, parts.legR);
   const body = new THREE.Group(); pivot.add(body); parts.body = body;
-  const trim = L.trim ?? C.gold, wide = L.outfit === 'robe' || L.outfit === 'gown' || L.outfit === 'dress';
-  let headY;
-  if (style === 'A') {
-    ell(body, 0.55 * g, 0.62, 0.45, shirt, 0, 0.62, 0, 28); ring(body, 0.25 * g, 0.035, C.leather, 0.58, 1, 0.8);
-    if (wide) ell(body, 0.6 * g, 0.36, 0.5, shirt, 0, 0.42, 0, 24);
-    headY = 1.17;
-  } else if (style === 'B') {
-    ell(body, 0.46 * g, 0.5, 0.36, shirt, 0, 0.7, 0, 28); ring(body, 0.2 * g, 0.03, C.leather, 0.66, 1, 0.8);
-    if (wide) ell(body, 0.52 * g, 0.34, 0.42, shirt, 0, 0.5, 0, 24);
-    // scarf wraps where head meets body
-    ring(body, 0.15, 0.05, trim, 0.93, 1.05, 0.9); const tail = ell(body, 0.07, 0.3, 0.035, trim, 0.1, 0.78, 0.14, 14); tail.rotation.z = 0.12;
-    headY = 1.13;
-  } else {
-    const prof = wide ? [[0, 1.02], [0.1, 1.0], [0.18, 0.92], [0.22, 0.7], [0.27, 0.4], [0.31, 0.18], [0.0, 0.1]] : [[0, 1.02], [0.1, 1.0], [0.19, 0.92], [0.24, 0.72], [0.26, 0.5], [0.27, 0.3], [0, 0.22]];
-    const lat = new THREE.Mesh(new THREE.LatheGeometry(new THREE.SplineCurve(prof.map(([r, y]) => new THREE.Vector2(r, y))).getPoints(30), 30), smooth(shirt));
-    lat.scale.set(g * 1.1, 1, 0.85); lat.castShadow = lat.receiveShadow = true; body.add(lat);
-    ring(body, 0.25 * g, 0.03, C.leather, 0.5, 1.05, 0.88);
-    const roll = collarMesh(body, g * 1.25, trim, 1); roll.position.y = -0.02;
-    headY = 1.1;
+  const hem = (c, r, y = 0.14) => ring(body, r * g, 0.028, c, y, 1, 0.82);
+  const belt = (c, y = 0.56) => ring(body, 0.225 * g, 0.032, c, y, 1, 0.82);
+  const collar = (c) => { const m = collarMesh(body, g * 1.2, c, 1); m.position.y = -0.02; return m; };
+  if (L.cloak != null) panel(body, g, L.cloak, outfit === 'robe' || outfit === 'noble' ? 'long' : outfit === 'gown' || outfit === 'dress' ? 'bell' : 'short', 0.14, 0.97, ...BACK(1.25), 1.07);
+  if (outfit === 'gown' || outfit === 'dress') {
+    garment(body, g, shirt, 'bell'); belt(outfit === 'gown' ? C.woolOchre : C.leather, 0.58); hem(C.cream, 0.352); collar(C.cream);
+    if (L.apron || outfit === 'dress') { panel(body, g, C.cream, 'bell', 0.15, 0.56, ...FRONT(0.55)); panel(body, g, C.cream, 'bell', 0.6, 0.86, ...FRONT(0.3)); }
+  } else if (outfit === 'robe') {
+    garment(body, g, shirt, 'long'); belt(C.cream, 0.58); hem(C.cream, 0.362); collar(tint(shirt, -0.2));
+    panel(body, g, C.cream, 'long', 0.14, 0.9, ...FRONT(0.1));
+  } else if (outfit === 'noble') {
+    garment(body, g, shirt, 'long'); hem(trim, 0.362); belt(C.gold, 0.56); collar(trim);
+    panel(body, g, trim, 'long', 0.14, 0.9, ...FRONT(0.16)); panel(body, g, tint(shirt, -0.25), 'long', 0.3, 0.8, ...BACK(0.9), 1.04);
+  } else if (outfit === 'smith') {
+    garment(body, g, shirt, 'short'); collar(shirt);
+    panel(body, g, C.leather, 'short', 0.14, 0.62, ...FRONT(0.6)); panel(body, g, C.leather, 'short', 0.64, 0.88, ...FRONT(0.34)); belt(C.leather, 0.54);
+  } else if (outfit === 'jerkin') {
+    garment(body, g, C.cream, 'short'); panel(body, g, trim, 'short', 0.42, 0.93, 0.28, Math.PI * 2 - 0.56, 1.04); collar(C.cream); belt(C.leather, 0.55);
+    for (let i = 0; i < 4; i++) ell(body, 0.1, 0.02, 0.03, C.leather, 0, 0.62 + i * 0.1, 0.205, 8);
+  } else { // tunic
+    garment(body, g, shirt, 'short'); belt(C.leather); hem(C.cream, 0.282); collar(C.cream);
+    box(body, 0.06, 0.07, 0.03, C.gold, 0, 0.53, 0.22, 0.01); ell(body, 0.1, 0.1, 0.06, C.leather, 0.23 * g, 0.5, 0.12, 12);
   }
-  for (const [name, sx] of [['armL', -1], ['armR', 1]]) {
-    const arm = new THREE.Group(); arm.position.set(sx * (style === 'C' ? 0.33 : 0.34) * g, 0.82, 0); arm.rotation.z = sx * 0.1; body.add(arm);
-    glove(arm, glv, shirt, -0.32, sx, style === 'A' ? 'sphere' : style === 'B' ? 'glove' : 'mitten');
+
+  for (const [name, sx] of [['armL', -1], ['armR', 1]]) { // floating sphere hands (the arm group is just the swing pivot)
+    const arm = new THREE.Group(); arm.position.set(sx * 0.3 * g, 0.82, 0); arm.rotation.z = sx * 0.08; body.add(arm);
+    ball(arm, 0.08, skin, sx * 0.07, -0.34, 0.03, 1, 1, 1, 3);
     parts[name] = arm;
   }
-  const head = new THREE.Group(); head.position.set(0, headY + (headBottom(L) - 0.2) * 0.8, 0); head.scale.setScalar(hs); body.add(head);
+  const hs = headScale * 1.1, hy = 1.14 + (headBottom(L) - 0.2) * 0.8;
+  const head = new THREE.Group(); head.position.set(0, hy, 0); head.scale.setScalar(hs); body.add(head);
   buildFace(head, L); buildHair(head, L); buildHeadwear(head, L);
   parts.head = head;
   return { root: outer, pivot, parts };
 }
 
-export const SPECIES = { human: buildHuman, rayA: (c) => buildRay('A', c), rayB: (c) => buildRay('B', c), rayC: (c) => buildRay('C', c) };
-export function buildPerson(cfg) { return (SPECIES[cfg.species || 'human'] || buildHuman)(cfg); }
+export const SPECIES = { human: buildHuman, ray: buildRay };
+export function buildPerson(cfg) { return (SPECIES[cfg.species || 'ray'] || buildRay)(cfg); }

@@ -4,7 +4,7 @@
 export const START_DATE = { year: 1216, season: 2, day: 12 }; // Autumn 1216
 
 export const FAMILY = [
-  { id: 'sam', name: 'Sam', role: 'Father', species: 'human', age: 38, scale: 1.0, headScale: 1.0,
+  { id: 'sam', name: 'Sam', role: 'Father', species: 'ray', age: 38, scale: 1.0, headScale: 1.0,
     look: { skin: 0xe6b08a, hair: 0x5b3a29, hairStyle: 'short', facial: 'full', outfit: 'tunic', shirt: 0x4f7a9c, pants: 0x6b5a48,
       eyes: 'dot', brows: 'thick', nose: 'big', mouth: 'flat', jaw: 'square', chin: 0.3, brow: 0.2, headW: 1.05, build: 1.1 },
     start: { x: 0.4, z: 0.7, yaw: -0.6 },
@@ -24,7 +24,7 @@ export const FAMILY = [
       { date: 'Summer 1203', icon: '💍', text: 'Married Maya at the village green.' },
       { date: 'Summer 1209', icon: '👶', text: 'His son Robin was born.' }] },
 
-  { id: 'maya', name: 'Maya', role: 'Mother', species: 'human', age: 36, scale: 0.95, headScale: 1.0,
+  { id: 'maya', name: 'Maya', role: 'Mother', species: 'ray', age: 36, scale: 0.95, headScale: 1.0,
     look: { skin: 0xc68a65, hair: 0x2e2a33, hairStyle: 'braid', outfit: 'gown', shirt: 0x9a4a6a, headwear: 'coif', headwearColor: 0xf0e8d4,
       eyes: 'wide', eyeColor: 0x3a2a1c, brows: 'arched', nose: 'button', mouth: 'smile', jaw: 'heart', chin: 0.1, headW: 0.97, accessories: ['earring'] },
     start: { x: 1.0, z: -1.8, yaw: 2.4 },
@@ -44,7 +44,7 @@ export const FAMILY = [
       { date: 'Summer 1203', icon: '💍', text: 'Married Sam at the village green.' },
       { date: 'Summer 1209', icon: '👶', text: 'Gave birth to Robin.' }] },
 
-  { id: 'robin', name: 'Robin', role: 'Child', species: 'human', age: 7, scale: 0.68, headScale: 1.22,
+  { id: 'robin', name: 'Robin', role: 'Child', species: 'ray', age: 7, scale: 0.68, headScale: 1.22,
     look: { skin: 0xf2c4a0, hair: 0xd9a441, hairStyle: 'messy', outfit: 'tunic', shirt: 0x7a9a5a, pants: 0x8a6a48,
       eyes: 'big', eyeColor: 0x4a8a3a, brows: 'thin', nose: 'button', mouth: 'grin', freckles: 8, headwear: 'hood', headwearColor: 0xb8433f },
     start: { x: -2.4, z: 1.2, yaw: 0.8 },
