@@ -65,19 +65,62 @@
   .port.sel .img { border-color: var(--goldhi); box-shadow: 0 0 0 2px rgba(0,0,0,.6), 0 0 14px rgba(240,205,118,.65); }
   .port .alert { position: absolute; top: 0; right: 4px; width: 13px; height: 13px; border-radius: 50%; background: #de5a4c; border: 2px solid #1d1510; display: none; box-shadow: 0 0 6px rgba(222,90,76,.8); }
   .port.warn .alert { display: block; }
+
+  #panel { display: flex; flex-direction: column; max-height: min(58vh, 430px); }
+  #tabs { display: flex; padding: 0 8px; gap: 2px; }
+  .tab { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 1px; padding: 5px 0 4px; border-radius: 10px 10px 0 0; color: #bfae86; opacity: .8; border-bottom: 3px solid transparent; }
+  .tab .ti { font-size: 19px; line-height: 1; } .tab .tl { font-size: 10.5px; font-weight: 800; }
+  .tab.on { color: var(--goldhi); opacity: 1; border-bottom-color: var(--goldhi); background: rgba(240,205,118,.08); }
+  #pbody { overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; touch-action: pan-y; }
+  #pbody::before, #pbody::after { display: none; }
+  #pbody { border-top: 1px solid rgba(201,162,76,.55); padding: 10px 12px 14px; }
+  .moodrow { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; font-size: 14px; font-weight: 700; }
+  .moodrow #moodface { font-size: 24px; } .moodrow .mt { white-space: nowrap; } .moodrow .mt b { color: var(--goldhi); }
+  .mbar { flex: 1; height: 10px; background: rgba(0,0,0,.55); border: 2px solid #8a6a32; border-radius: 8px; overflow: hidden; }
+  .mbar i { display: block; height: 100%; width: 70%; background: linear-gradient(90deg, #c88a2c, #f0cd76); transition: width .3s; }
+  #datetxt { font-family: var(--title); font-weight: 800; font-size: 14px; color: var(--goldhi); margin-bottom: 4px; text-align: center; }
+
+  /* tab content */
+  #pane-dyn h4 { margin: 12px 0 6px; font-family: var(--title); font-size: 17px; font-weight: 800; color: var(--goldhi); }
+  #pane-dyn h4:first-child { margin-top: 0; } h4 .dim, .dim { color: #b9a77e; font-weight: 600; font-size: 12px; }
+  .card { background: rgba(0,0,0,.28); border: 1px solid rgba(201,162,76,.4); border-radius: 12px; padding: 9px 11px; margin-bottom: 8px; font-size: 13px; line-height: 1.35; }
+  .row { display: flex; gap: 10px; align-items: center; margin-bottom: 8px; font-size: 13px; }
+  .row.card { align-items: flex-start; } .grow { flex: 1; min-width: 0; }
+  .nm { color: #f6ead0; font-size: 14px; font-weight: 800; } .note { color: #cdbb90; font-size: 12.5px; margin-top: 2px; }
+  .rt { display: flex; align-items: baseline; gap: 8px; } .right { margin-left: auto; } .good { color: #8fd18f; } .bad { color: #e07a6e; }
+  .ico { font-size: 22px; width: 28px; text-align: center; } .av { width: 46px; height: 46px; border-radius: 50%; overflow: hidden; border: 2px solid #5b4426; background: radial-gradient(#4a3a2c, #1d1510); flex: none; } .av img { width: 100%; height: 100%; display: block; }
+  .mini { height: 8px; background: rgba(0,0,0,.55); border: 1px solid #8a6a32; border-radius: 6px; overflow: hidden; margin: 5px 0 3px; } .mini i { display: block; height: 100%; background: linear-gradient(90deg, #4f9a5c, #74c47e); }
+  .mini.heart i { background: linear-gradient(90deg, #b8434f, #ef7a8a); } .mini.bad i { background: linear-gradient(90deg, #6a3a3a, #a83a32); } .mini.gold i { background: linear-gradient(90deg, #c88a2c, #f0cd76); } .mini.xp i { background: linear-gradient(90deg, #4a7a9c, #7ab4dc); }
+  .rs { display: flex; justify-content: space-between; font-size: 12px; font-weight: 700; }
+  .wish, .step { display: flex; gap: 8px; padding: 6px 4px; font-size: 13.5px; font-weight: 600; border-bottom: 1px dashed rgba(201,162,76,.25); } .step { padding: 3px 0; border: 0; font-size: 13px; }
+  .wish .ck, .step .ck { color: var(--goldhi); width: 16px; text-align: center; } .wish.done, .step.done { color: #8fd18f; text-decoration: line-through; opacity: .8; }
+  .goal.done { border-color: #f0cd76; } .dream { border-style: dashed; color: #d6c59c; } .bio { font-size: 13.5px; line-height: 1.45; color: #f0e4c4; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 4px; }
+  .chip { display: inline-flex; align-items: center; gap: 5px; padding: 4px 10px 4px 7px; border-radius: 999px; border: 1.5px solid #8a6a32; background: rgba(0,0,0,.3); font-size: 13px; font-weight: 700; color: #f0e4c4; }
+  .chip.good { border-color: #6aae6a; background: rgba(90,160,90,.15); } .chip.bad { border-color: #c0605a; background: rgba(190,80,70,.15); } .chip b { font-size: 15px; }
+  .pips { display: flex; gap: 3px; margin: 4px 0 2px; } .pips u { width: 15px; height: 8px; border-radius: 2px; background: rgba(0,0,0,.5); border: 1px solid #8a6a32; } .pips u.on { background: #f0cd76; }
+  .kv { display: flex; justify-content: space-between; font-size: 13px; padding: 3px 0; border-bottom: 1px dashed rgba(201,162,76,.2); } .kv span { color: #cdbb90; }
+  .hint { margin: 8px 0 2px; font-size: 12px; color: #a99872; line-height: 1.35; }
+  .timeline { position: relative; padding-left: 4px; } .timeline::before { content: ''; position: absolute; left: 17px; top: 6px; bottom: 6px; width: 2px; background: rgba(201,162,76,.35); }
+  .ev { display: flex; gap: 10px; padding: 5px 0; font-size: 13px; font-weight: 600; color: #f0e4c4; } .evi { width: 28px; height: 28px; border-radius: 50%; background: #2f2218; border: 2px solid #8a6a32; display: flex; align-items: center; justify-content: center; font-size: 14px; position: relative; flex: none; }
+  .evd { font-size: 11.5px; font-weight: 800; color: #b9a77e; }
 </style>
 </head>
 <body>
 <div id="vignette"></div>
 <div id="clockbox">
   <div id="clockrow"><button class="pill wood" id="clock">21:30</button><button class="pill wood" id="play">Auto</button></div>
-  <div id="timepop" class="wood"><input id="time" type="range" min="0" max="24" step="0.01" value="21.5"></div>
+  <div id="timepop" class="wood"><div id="datetxt"></div><input id="time" type="range" min="0" max="24" step="0.01" value="21.5"></div>
 </div>
 <div id="dock">
   <div id="status" class="wood"></div>
   <div id="panel" class="wood closed">
     <div id="phead"><span id="pname"></span><span id="prole"></span><span id="pact"></span></div>
-    <div id="pbody"><div id="needs"></div></div>
+    <div id="tabs"></div>
+    <div id="pbody">
+      <div id="pane-needs"><div class="moodrow"><span id="moodface">🙂</span><span class="mt">Mood: <b id="moodtext">Content</b></span><div class="mbar"><i id="moodfill"></i></div></div><div id="needs"></div></div>
+      <div id="pane-dyn"></div>
+    </div>
   </div>
   <div id="portraits" class="wood"></div>
 </div>

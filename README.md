@@ -10,6 +10,8 @@ to use it. Pinch / mouse wheel to zoom, drag to pan. People you haven't selected
 driven by their needs (hunger, social, hygiene, fun, rest).
 URL options: `?t=22` sets the hour, `?speed=3` speeds up the simulation.
 
+Vision and roadmap: `docs/VISION.md`.
+
 Layout: `src/data/` pure data (house, furniture, family) - `src/sim/` headless simulation, needs, pathfinding -
 `src/render/` three.js models, species builders and animation - `src/ui.js` bottom dock - `src/input.js` camera rig.
 Characters have a `species` field; add a builder to `SPECIES` in `src/render/people.js` for non-human folk.

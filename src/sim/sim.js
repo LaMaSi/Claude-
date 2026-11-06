@@ -1,6 +1,8 @@
 // Headless simulation: characters, movement, furniture use. No rendering imports.
 import { FURNITURE, NEEDS } from '../data/furniture.js';
 import { buildNav } from './nav.js';
+import { START_DATE } from '../data/family.js';
+import { initLife, tick as lifeTick, endSession, preferenceWeight, decayMult, advanceDate } from './life.js';
 
 const TAU = Math.PI * 2;
 const angDiff = (a, b) => { let d = (b - a) % TAU; if (d > Math.PI) d -= TAU; if (d < -Math.PI) d += TAU; return d; };
@@ -9,7 +11,7 @@ const rand = (a, b) => a + Math.random() * (b - a);
 // seconds for a full bar to drain to empty / restore rate per second at weight 1
 const DECAY_SECONDS = { hunger: 240, social: 300, hygiene: 360, fun: 260, sleep: 420 };
 const RESTORE = 0.07;
-const sat = (c, def) => Object.entries(def.needs).every(([n, w]) => w < 0.4 || c.needs[n] > 0.93);
+const sat = (c, def) => Object.entries(def.needs).every(([n, w]) => w < 0.4 || c.needs[n] > 0.86);
 export const toWorld = (it, lx, lz) => {
   const c = Math.cos(it.rot || 0), s = Math.sin(it.rot || 0);
   return { x: it.x + lx * c + lz * s, z: it.z - lx * s + lz * c };
@@ -22,7 +24,7 @@ export class Sim {
     this.nav = buildNav(house, FURNITURE);
     this.occupied = new Map(); // "item:slot" -> character id
     this.selectedId = null;
-    this.hour = 12;
+    this.hour = 12; this.time = 0; this.flags = {}; this.date = { ...START_DATE };
     this.chars = family.map((f) => {
       const p = this.nav.nearestWalkable(f.start.x, f.start.z);
       return {
@@ -33,6 +35,7 @@ export class Sim {
         pose: { kind: 'stand', anim: 'none' }, activity: '', idleTimer: rand(1, 4), useTimer: 0,
       };
     });
+    this.chars.forEach((c, i) => initLife(c, family[i], this));
   }
 
   char(id) { return this.chars.find((c) => c.id === id); }
@@ -123,7 +126,7 @@ export class Sim {
     if (u.pose === 'sit') y = u.seatTop - 0.5 * c.scale + 0.02;
     if (u.pose === 'sleep') { lz = -0.62 + 1.2 * c.scale; y = 0.5 + 0.13 * c.scale; }
     const w = toWorld(p.item, slot.x, lz);
-    c.use = { ...p, exit: p.stand };
+    c.use = { ...p, exit: p.stand }; c.lastUse = p.item.def;
     c.pending = null;
     c.pose = { kind: u.pose, anim: u.anim || 'none' };
     c.activity = p.label;
@@ -133,6 +136,7 @@ export class Sim {
   }
 
   beginExit(c) {
+    endSession(c, this);
     const ex = c.use?.exit || { x: c.x, z: c.z };
     c.tween = { t: 0, dur: 0.5, from: { x: c.x, z: c.z, y: c.y, yaw: c.yaw }, to: { x: ex.x, z: ex.z, y: 0, yaw: c.yaw } };
     c.mode = 'exit';
@@ -161,7 +165,8 @@ export class Sim {
       if (!def.use) continue;
       const tdef = def.use.redirect ? FURNITURE[def.use.redirect] : def;
       if (def.use.redirect ? !this.items.some((o) => o.def === def.use.redirect && this.freeSlot(o, c) >= 0) : this.freeSlot(it, c) < 0) continue;
-      let w = 0.03 + this.urgency(c, tdef) * 4;
+      let w = (0.03 + this.urgency(c, tdef) * 4) * preferenceWeight(c, tdef.tags);
+      if (c.lastUse === (def.use.redirect ? def.use.redirect : it.def)) w *= 0.15; // variety: don't repeat the same thing back to back
       if (it.def === 'bed') w *= night ? 3 : 0.25;
       options.push({ w, it });
     }
@@ -185,15 +190,20 @@ export class Sim {
   }
 
   updateNeeds(c, dt) {
-    for (const n of NEEDS) c.needs[n] = Math.max(0, c.needs[n] - dt / DECAY_SECONDS[n]);
+    for (const n of NEEDS) c.needs[n] = Math.max(0, c.needs[n] - dt * decayMult(c, n) / DECAY_SECONDS[n]);
     // company: being near another person slowly restores social
     for (const o of this.chars) if (o !== c && (o.x - c.x) ** 2 + (o.z - c.z) ** 2 < 6) { c.needs.social = Math.min(1, c.needs.social + dt * 0.012); break; }
     if (c.mode === 'use' && c.use) {
       for (const [n, w] of Object.entries(FURNITURE[c.use.item.def].needs)) c.needs[n] = Math.min(1, c.needs[n] + dt * RESTORE * w * (n === 'sleep' ? 1.1 : 1));
     }
+    lifeTick(c, dt, this);
   }
 
+  setFlag(name, v = true) { this.flags[name] = v; }
+  advanceDay() { advanceDate(this.date); }
+
   update(dt) {
+    this.time += dt;
     for (const c of this.chars) {
       this.updateNeeds(c, dt);
       const selected = c.id === this.selectedId;

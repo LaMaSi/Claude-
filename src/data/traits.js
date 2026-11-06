@@ -1,0 +1,44 @@
+// Personality building blocks. Everything here is data; sim/life.js applies the effects.
+// Activity tags link furniture to likes/dislikes, wishes, goals and skill training.
+export const TAGS = {
+  music: { icon: '🎵', label: 'Music' }, reading: { icon: '📖', label: 'Reading' }, tales: { icon: '⚔️', label: 'Hero tales' },
+  cooking: { icon: '🍲', label: 'Cooking' }, eating: { icon: '🍞', label: 'Hearty meals' }, gardening: { icon: '🌿', label: 'Gardening' },
+  socializing: { icon: '🗣️', label: 'Company' }, resting: { icon: '🛋️', label: 'Lazing about' }, bathing: { icon: '🛁', label: 'Bathing' },
+  sleeping: { icon: '🌙', label: 'Sleeping in' },
+};
+
+// effects: decay (multiplier on need drain), skillGain, relGain, weights (how much they favour an activity tag)
+export const TRAITS = {
+  hardworking: { icon: '💪', name: 'Hardworking', desc: 'Tires faster, but learns skills quickly.', decay: { sleep: 1.1 }, skillGain: 1.25 },
+  quiet: { icon: '🤫', name: 'Quiet', desc: 'Content with little company; slow to open up.', decay: { social: 0.65 }, relGain: 0.85 },
+  sociable: { icon: '🎉', name: 'Sociable', desc: 'Craves company and makes friends easily.', decay: { social: 1.4 }, relGain: 1.3 },
+  hearty: { icon: '🍖', name: 'Hearty appetite', desc: 'Always hungry; loves a full table.', decay: { hunger: 1.3 }, weights: { eating: 1.4 } },
+  curious: { icon: '🔍', name: 'Curious', desc: 'Bored easily; devours books and tales.', decay: { fun: 1.2 }, skillGain: 1.1, weights: { reading: 1.4, tales: 1.3 } },
+  dreamer: { icon: '☁️', name: 'Dreamer', desc: 'Drifts off into music and daydreams.', decay: { fun: 1.15 }, weights: { music: 1.3, resting: 1.2 } },
+  lazy: { icon: '😴', name: 'Lazy', desc: 'Sleeps in and loves a soft seat.', decay: { sleep: 1.3 }, weights: { resting: 1.5, sleeping: 1.3 } },
+  kind: { icon: '💛', name: 'Kind-hearted', desc: 'Warms to people quickly.', relGain: 1.3 },
+  adventurous: { icon: '🧭', name: 'Adventurous', desc: 'Restless; hates sitting still.', decay: { fun: 1.3 }, weights: { resting: 0.6, tales: 1.4 } },
+  tidy: { icon: '🧼', name: 'Tidy', desc: 'Cannot stand being dirty.', decay: { hygiene: 1.4 }, weights: { bathing: 1.5 } },
+  practical: { icon: '🛠️', name: 'Practical', desc: 'Learns useful skills; favours homely chores.', skillGain: 1.15, weights: { gardening: 1.2, cooking: 1.2 } },
+  stubborn: { icon: '🪨', name: 'Stubborn', desc: 'Slow to change; slower to learn new things.', skillGain: 0.9, relGain: 0.9 },
+};
+
+export const SKILLS = {
+  cooking: { icon: '🍲', name: 'Cooking' }, herbalism: { icon: '🌿', name: 'Herbalism' }, music: { icon: '🎵', name: 'Music' },
+  lore: { icon: '📖', name: 'Lore' }, woodcraft: { icon: '🪓', name: 'Woodcraft' }, fighting: { icon: '⚔️', name: 'Fighting' },
+  trading: { icon: '⚖️', name: 'Trading' }, magic: { icon: '✨', name: 'Magic' },
+};
+
+// Short-term wishes. `need` biases which wish a person is likely to form.
+export const WISHES = [
+  { id: 'music', text: 'Play a tune on the harp', tag: 'music', need: 'fun' },
+  { id: 'read', text: 'Read a book', tag: 'reading', need: 'fun' },
+  { id: 'tales', text: 'Read tales of heroes', tag: 'tales', need: 'fun' },
+  { id: 'cook', text: 'Cook a hearty stew', tag: 'cooking', need: 'hunger' },
+  { id: 'meal', text: 'Share a meal at the table', tag: 'eating', need: 'hunger' },
+  { id: 'herbs', text: 'Tend the herbs', tag: 'gardening', need: 'fun' },
+  { id: 'bathe', text: 'Take a proper bath', tag: 'bathing', need: 'hygiene' },
+  { id: 'rest', text: 'Rest on the settle', tag: 'resting', need: 'sleep' },
+  { id: 'sleep', text: 'Have a good night’s sleep', tag: 'sleeping', need: 'sleep' },
+  { id: 'together', text: 'Spend an evening with family', tag: 'together', need: 'social' },
+];

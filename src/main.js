@@ -77,18 +77,26 @@ function onTap(cx, cy) {
 const rig = createCameraRig(camera, renderer.domElement, BASE, { onTap });
 select('sam', false);
 
-const UI_TOP = 52, UI_BOTTOM = 112; // px reserved for the clock and the portrait row
+const UI_TOP = 52, UI_BOTTOM = 112; // px reserved for the clock and the (closed) dock
+const dock = document.getElementById('dock');
+let shift = (UI_BOTTOM - UI_TOP) / 2, shiftTarget = shift;
+function applyView() {
+  const w = window.innerWidth, h = window.innerHeight;
+  camera.setViewOffset(w, h, 0, shift, w, h); rig.resize();
+}
 function resize() {
   const w = window.innerWidth, h = window.innerHeight;
   renderer.setSize(w, h);
   const hEff = Math.max(200, h - UI_TOP - UI_BOTTOM), needW = w < h ? 17 : 22, needH = 15.5;
-  const sizeEff = Math.max(needH, needW * hEff / w);      // world height that must fit in the free band
+  const sizeEff = Math.max(needH, needW * hEff / w);      // world height that must fit in the free band (dock closed)
   const size = sizeEff * h / hEff, aspect = w / h;
   camera.left = -size * aspect / 2; camera.right = size * aspect / 2;
   camera.top = size / 2; camera.bottom = -size / 2;
-  camera.setViewOffset(w, h, 0, (UI_BOTTOM - UI_TOP) / 2, w, h); // lift the scene into the free band
-  rig.resize();
+  // lift the scene above the dock; follows the dock height so an open panel never hides the action
+  shiftTarget = (Math.max(UI_BOTTOM, dock.offsetHeight + 14) - UI_TOP) / 2;
+  applyView();
 }
+if (window.ResizeObserver) new ResizeObserver(() => resize()).observe(dock);
 window.addEventListener('resize', resize);
 resize();
 
@@ -111,7 +119,7 @@ function frame(now) {
     if (quality === 1) { renderer.setPixelRatio(1); resize(); }
     else { const s = updateLighting.sun.shadow; s.mapSize.set(1024, 1024); s.map?.dispose(); s.map = null; }
   }
-  if (auto) { hour = (hour + dt * 0.5) % 24; slider.value = hour; }
+  if (auto) { const nh = (hour + dt * 0.5) % 24; if (nh < hour) sim.advanceDay(); hour = nh; slider.value = hour; }
   clock.textContent = fmt(hour);
   updateLighting(hour, world, now / 1000);
   sim.hour = hour;
@@ -120,6 +128,7 @@ function frame(now) {
   rig.update(dt);
   if (markerT < 1) { markerT += dt / 0.7; marker.material.opacity = (1 - markerT) * 0.9; marker.scale.setScalar(1 + markerT * 1.2); }
   ui.update(dt);
+  if (Math.abs(shift - shiftTarget) > 0.3) { shift += (shiftTarget - shift) * (1 - Math.exp(-dt * 9)); applyView(); }
   renderer.render(scene, camera);
   requestAnimationFrame(frame);
 }
