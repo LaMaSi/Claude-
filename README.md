@@ -13,3 +13,6 @@ URL options: `?t=22` sets the hour, `?speed=3` speeds up the simulation.
 Layout: `src/data/` pure data (house, furniture, family) - `src/sim/` headless simulation, needs, pathfinding -
 `src/render/` three.js models, species builders and animation - `src/ui.js` bottom dock - `src/input.js` camera rig.
 Characters have a `species` field; add a builder to `SPECIES` in `src/render/people.js` for non-human folk.
+
+Showcase: `showcase.html` (deployed next to the game) shows 20 hand-designed human variants. Looks are data in
+`src/data/variants.js`; the parametric face/hair/outfit system lives in `src/render/people.js`.

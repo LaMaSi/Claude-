@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0c1520">
+<title>Little Lives - Folk Showcase</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Alegreya:wght@700;800&family=Nunito+Sans:wght@600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root { --gold: #c9a24c; --goldhi: #f0cd76; --text: #ecdcb4; --dim: #b9a77e; --title: 'Alegreya', 'Palatino Linotype', Georgia, serif; --body: 'Nunito Sans', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: radial-gradient(ellipse at 50% 0%, #1b2a2a, #0c1520 70%); color: var(--text); font-family: var(--body); font-weight: 600; min-height: 100vh; }
+  header { position: sticky; top: 0; z-index: 2; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding: 10px 14px; background: rgba(12,21,32,.92); backdrop-filter: blur(6px); border-bottom: 2px solid var(--gold); }
+  h1 { margin: 0; font-family: var(--title); font-size: 22px; font-weight: 800; letter-spacing: .02em; color: var(--goldhi); }
+  .sp { flex: 1; }
+  .seg { display: flex; border: 2px solid var(--gold); border-radius: 999px; overflow: hidden; }
+  .seg button { font-family: var(--body); font-weight: 800; font-size: 13px; color: var(--dim); background: none; border: 0; padding: 6px 14px; }
+  .seg button.on { background: var(--gold); color: #1d1510; }
+  a.back { color: var(--goldhi); font-family: var(--body); font-weight: 800; font-size: 13px; text-decoration: none; border: 2px solid var(--gold); border-radius: 999px; padding: 5px 12px; }
+  main { padding: 14px; display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; max-width: 1100px; margin: 0 auto; }
+  .card { background: repeating-linear-gradient(92deg, rgba(255,255,255,.025) 0 2px, rgba(0,0,0,.05) 2px 5px), linear-gradient(#2f2218, #1d1510);
+          border: 2px solid var(--gold); border-radius: 14px; padding: 8px 8px 10px; text-align: center; box-shadow: 0 3px 10px rgba(0,0,0,.5), inset 0 0 0 2px rgba(0,0,0,.5); }
+  .card .pic { aspect-ratio: 1; border-radius: 10px; background: radial-gradient(#4a3a2c, #1d1510); display: flex; align-items: center; justify-content: center; overflow: hidden; }
+  .card img { height: 100%; width: auto; max-width: 100%; display: block; }
+  .both .card .pic { aspect-ratio: auto; height: 190px; gap: 2px; }
+  .body .card .pic { aspect-ratio: 3 / 4; }
+  .card h2 { margin: 8px 0 0; font-family: var(--title); font-size: 20px; font-weight: 800; letter-spacing: .01em; color: var(--goldhi); }
+  .card .role { font-size: 14px; font-weight: 700; color: #f6ead0; }
+  .card .note { font-size: 13px; font-weight: 600; color: #cdbb90; }
+  #msg { grid-column: 1 / -1; text-align: center; color: var(--dim); padding: 30px 0; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Folk of Little Lives</h1><span class="sp"></span>
+  <div class="seg" id="seg"><button data-m="face" class="on">Faces</button><button data-m="body">Full body</button><button data-m="both">Both</button></div>
+  <a class="back" href="./">Back to game</a>
+</header>
+<main id="grid"><div id="msg">Gathering the villagers...</div></main>
+<script type="module" src="/src/showcase.js"></script>
+</body>
+</html>

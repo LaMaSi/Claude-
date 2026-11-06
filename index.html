@@ -6,11 +6,11 @@
 <meta name="theme-color" content="#0c1520">
 <title>Little Lives</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Alegreya:wght@700;800&family=Nunito+Sans:wght@600;700;800&display=swap" rel="stylesheet">
 <style>
   :root { --wood1: #1d1510; --wood2: #2f2218; --gold: #c9a24c; --goldhi: #f0cd76; --text: #ecdcb4; --dim: #b9a77e; --ink: #0c0806;
-          --title: 'Cinzel', 'Palatino Linotype', Georgia, serif; --body: Georgia, 'Palatino Linotype', 'Book Antiqua', serif; }
-  html, body { margin: 0; height: 100%; overflow: hidden; background: #0c1520; font-family: var(--body); color: var(--text); -webkit-user-select: none; user-select: none; }
+          --title: 'Alegreya', 'Palatino Linotype', Georgia, serif; --body: 'Nunito Sans', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; }
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #0c1520; font-family: var(--body); color: var(--text); font-weight: 600; -webkit-user-select: none; user-select: none; }
   canvas { display: block; touch-action: none; }
   button { font: inherit; color: inherit; border: 0; background: none; padding: 0; -webkit-tap-highlight-color: transparent; }
 
@@ -24,7 +24,7 @@
   /* clock: small, top-right, out of the thumb zone */
   #clockbox { position: fixed; top: calc(8px + env(safe-area-inset-top)); right: 10px; display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
   #clockrow { display: flex; gap: 6px; }
-  .pill { padding: 5px 13px; border-radius: 999px; font-family: var(--title); font-weight: 700; font-size: 13px; letter-spacing: .05em; color: var(--goldhi); }
+  .pill { padding: 5px 13px; border-radius: 999px; font-family: var(--title); font-weight: 800; font-size: 15px; letter-spacing: .03em; color: var(--goldhi); }
   #clock { font-variant-numeric: tabular-nums; }
   #timepop { display: none; border-radius: 14px; padding: 9px 13px; }
   #timepop.open { display: block; }
@@ -34,20 +34,20 @@
   #dock { position: fixed; left: 0; right: 0; bottom: 0; display: flex; flex-direction: column; align-items: center; gap: 8px;
           padding: 0 10px calc(10px + env(safe-area-inset-bottom)); pointer-events: none; }
   #dock > * { pointer-events: auto; }
-  #status { border-radius: 999px; padding: 3px 14px; font-size: 13px; font-style: italic; color: var(--text); }
+  #status { border-radius: 999px; padding: 4px 14px; font-size: 14px; font-weight: 700; color: #f6ead0; }
   #status.hide { display: none; }
 
   #panel { width: min(100%, 520px); box-sizing: border-box; border-radius: 16px; overflow: hidden; }
   #panel.closed { display: none; }
   #phead { display: flex; align-items: baseline; gap: 10px; padding: 10px 14px 6px; }
-  #pname { font-family: var(--title); font-size: 19px; font-weight: 700; letter-spacing: .05em; color: var(--goldhi); }
-  #prole { font-size: 12px; color: var(--dim); }
-  #pact { margin-left: auto; font-size: 12px; font-style: italic; color: var(--text); text-align: right; }
+  #pname { font-family: var(--title); font-size: 24px; font-weight: 800; letter-spacing: .02em; color: var(--goldhi); }
+  #prole { font-size: 13px; font-weight: 600; color: var(--dim); }
+  #pact { margin-left: auto; font-size: 13px; font-weight: 700; color: #f6ead0; text-align: right; }
   #pbody { position: relative; padding: 10px 12px 14px; }
   #pbody::before { content: '❖'; position: absolute; top: -9px; left: 50%; transform: translateX(-50%); font-size: 11px; color: var(--gold); background: var(--wood1); padding: 0 8px; }
   #pbody::after { content: ''; position: absolute; top: 0; left: 14px; right: 14px; height: 1px; background: linear-gradient(90deg, transparent, var(--gold) 20%, var(--gold) 80%, transparent); }
   #needs { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
-  .need { display: flex; flex-direction: column; align-items: center; gap: 4px; font-size: 11px; color: var(--dim); }
+  .need { display: flex; flex-direction: column; align-items: center; gap: 4px; font-size: 12px; font-weight: 700; color: #d6c59c; }
   .need .ico { font-size: 20px; line-height: 1; filter: saturate(.85); }
   .need .bar { position: relative; width: 100%; max-width: 36px; height: 62px; background: rgba(0,0,0,.55); border: 2px solid #8a6a32; border-radius: 10px 10px 8px 8px; overflow: hidden; box-shadow: inset 0 0 6px rgba(0,0,0,.8); }
   .need .fill { position: absolute; left: 0; right: 0; bottom: 0; height: 50%; background: linear-gradient(90deg, #4f9a5c, #74c47e 45%, #4f9a5c); transition: height .25s linear; }
@@ -58,7 +58,7 @@
   @keyframes pulse { 50% { border-color: #de5a4c; box-shadow: inset 0 0 6px rgba(0,0,0,.8), 0 0 8px rgba(222,90,76,.6); } }
 
   #portraits { display: flex; gap: 12px; justify-content: center; padding: 8px 14px 5px; border-radius: 18px; }
-  .port { position: relative; display: flex; flex-direction: column; align-items: center; gap: 3px; font-family: var(--title); color: var(--dim); font-size: 11px; font-weight: 700; letter-spacing: .06em; width: 68px; }
+  .port { position: relative; display: flex; flex-direction: column; align-items: center; gap: 3px; font-family: var(--title); color: #cdbb90; font-size: 15px; font-weight: 800; letter-spacing: .02em; width: 68px; }
   .port.sel { color: var(--goldhi); }
   .port .img { width: 60px; height: 60px; border-radius: 50%; background: radial-gradient(#4a3a2c, #1d1510); border: 3px solid #5b4426; box-sizing: border-box; overflow: hidden; display: block; box-shadow: inset 0 0 8px rgba(0,0,0,.7); }
   .port img { width: 100%; height: 100%; display: block; opacity: .93; }
