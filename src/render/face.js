@@ -55,7 +55,7 @@ const W = 1024, H = 512;
 const texCache = new Map();
 export function headMaterial(L) {
   const key = JSON.stringify([L.skin, L.headW, L.headH, L.eyes, L.eyeColor, L.eyeGap, L.eyeY, L.eyeSize, L.brows, L.browColor ?? L.hair,
-    L.nose, L.mouth, L.blush, L.freckles, L.accessories.includes('eyepatch'), L.accessories.includes('scar')]);
+    L.nose, L.mouth, L.eyeTilt ?? 0, L.blush, L.freckles, L.accessories.includes('eyepatch'), L.accessories.includes('scar')]);
   if (!texCache.has(key)) {
     const tex = new THREE.CanvasTexture(paintFace(L));
     tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 4; tex.generateMipmaps = true; tex.minFilter = THREE.LinearMipmapLinearFilter;
@@ -95,6 +95,7 @@ function paintFace(L) {
   const ex = L.eyeGap, ey = 0.02 + L.eyeY, es = L.eyeSize, eye = L.eyes, ic = css(new THREE.Color(L.eyeColor));
   for (const s of [-1, 1]) {
     const cx = s * ex, hl = (px, py, r) => ell(cx + px, ey + py, r, r, '#ffffff');
+    x.save(); x.translate(cx, ey); x.rotate(s * (L.eyeTilt ?? 0) * 0.3); x.translate(-cx, -ey); // upturned (+) or droopy (-) outer corners
     if (eye === 'dot') {
       ell(cx, ey, 0.026 * es, 0.036 * es, ink); hl(0.008 * es, 0.014 * es, 0.009 * es);
     } else if (eye === 'big') {
@@ -116,6 +117,7 @@ function paintFace(L) {
     } else if (eye === 'happy') {
       stroke(0.013, ink); x.beginPath(); x.ellipse(cx, ey - 0.012, 0.03 * es, 0.026 * es, 0, 0.05 * Math.PI, 0.95 * Math.PI); x.stroke();
     }
+    x.restore();
     // brows
     const by = ey + 0.062 * (es > 1.1 ? 1.2 : 1), bs = L.brows;
     const bk = (w, th, tilt, dx = 0, dy = 0) => { x.save(); x.translate(cx + dx, by + dy); x.rotate(tilt); stroke(th, brow); x.beginPath(); x.moveTo(-w / 2, 0); x.lineTo(w / 2, 0); x.stroke(); x.restore(); };
@@ -135,6 +137,9 @@ function paintFace(L) {
   if (m === 'smirk') { mouth(); x.beginPath(); x.moveTo(-0.03, my - 0.002); x.quadraticCurveTo(0.008, my - 0.008, 0.038, my + 0.012); x.stroke(); }
   if (m === 'frown') { mouth(); x.beginPath(); x.moveTo(-0.032, my - 0.008); x.quadraticCurveTo(0, my + 0.014, 0.032, my - 0.008); x.stroke(); }
   if (m === 'open') { ell(0, my - 0.004, 0.03, 0.022, '#5a2428'); x.save(); x.beginPath(); x.ellipse(0, my - 0.004, 0.03, 0.022, 0, 0, Math.PI * 2); x.clip(); x.fillStyle = '#fffaf0'; x.fillRect(-0.03, my + 0.004, 0.06, 0.02); ell(0, my - 0.02, 0.016, 0.01, '#c96a70'); x.restore(); }
+  if (m === 'tiny') { mouth(0.009); x.beginPath(); x.moveTo(-0.018, my + 0.004); x.quadraticCurveTo(0, my - 0.01, 0.018, my + 0.004); x.stroke(); }
+  if (m === 'cat') { mouth(0.009); x.beginPath(); x.moveTo(-0.034, my + 0.006); x.quadraticCurveTo(-0.017, my - 0.016, 0, my + 0.002); x.quadraticCurveTo(0.017, my - 0.016, 0.034, my + 0.006); x.stroke(); }
+  if (m === 'pout') { ell(0, my, 0.02, 0.012, lipC); ell(0, my + 0.004, 0.016, 0.004, css(mix(skin.getHex(), 0xffffff, 0.35))); }
   if (m === 'o') { ell(0, my, 0.014, 0.018, '#5a2428'); }
   if (m === 'grin') { x.save(); x.beginPath(); x.moveTo(-0.045, my + 0.014); x.quadraticCurveTo(0, my - 0.022, 0.045, my + 0.014); x.quadraticCurveTo(0, my + 0.004, -0.045, my + 0.014); x.closePath(); x.clip(); x.fillStyle = '#5a2428'; x.fillRect(-0.06, my - 0.04, 0.12, 0.06); x.fillStyle = '#fffaf0'; x.fillRect(-0.06, my + 0.002, 0.12, 0.02); x.restore(); mouth(0.008); x.beginPath(); x.moveTo(-0.045, my + 0.014); x.quadraticCurveTo(0, my - 0.022, 0.045, my + 0.014); x.stroke(); }
 
