@@ -7,26 +7,43 @@ const hex = (n) => '#' + n.toString(16).padStart(6, '0');
 const mix = (a, b, t) => new THREE.Color(a).lerp(new THREE.Color(b), t);
 const css = (c) => '#' + c.getHexString();
 
-// ---- geometry: sphere squashed per jaw style (smooth normals, no facets) ------------------------------------------
+// ---- geometry: sphere sculpted per face shape (smooth normals, no facets) ----------------------------------------
+// shape: oval | round | long | heart | pear | square | chubby (legacy: soft = chubby, pointy = heart).
+// Optional tweaks: chin (-1 weak .. +1 strong/jutting), cheek (0..1 fullness), brow (0..1 forehead bulge).
+const SHAPES = {
+  oval:   { low: 0.14, lowPow: 1.5, up: 0, chinY: 0.06 },
+  round:  { low: 0.05, lowPow: 2, up: 0, chinY: 0 },
+  long:   { low: 0.2, lowPow: 1.3, up: 0, chinY: 0.1 },
+  heart:  { low: 0.4, lowPow: 1.3, up: 0.07, chinY: 0.1, zLow: 0.2 },
+  pear:   { low: -0.1, lowPow: 0.9, up: -0.1, chinY: 0, zLow: 0 },
+  square: { low: -0.1, lowPow: 0.7, up: 0, chinY: -0.1, flat: 0.84, zLow: -0.04 },
+  chubby: { low: -0.07, lowPow: 0.9, up: 0, chinY: 0.0, cheek: 0.1 },
+};
+const ALIAS = { soft: 'chubby', pointy: 'heart' };
 const geoCache = new Map();
 export function headGeometry(L) {
-  const key = [L.headW, L.headH, L.jaw].join('|');
+  const shape = SHAPES[L.jaw] ? L.jaw : (ALIAS[L.jaw] ?? 'oval'), S = SHAPES[shape];
+  const chin = L.chin ?? 0, cheek = (L.cheek ?? 0) + (S.cheek ?? 0), brow = L.brow ?? 0;
+  const key = [L.headW, L.headH, shape, chin, cheek, brow].join('|');
   if (geoCache.has(key)) return geoCache.get(key);
-  const R = HEAD_R, g = new THREE.SphereGeometry(R, 40, 28), P = g.attributes.position, N = g.attributes.normal;
-  const hw = L.headW, hh = L.headH;
+  const R = HEAD_R, g = new THREE.SphereGeometry(R, 44, 32), P = g.attributes.position, N = g.attributes.normal;
+  const hw = L.headW, hh = L.headH, sm = THREE.MathUtils.smoothstep;
   for (let i = 0; i < P.count; i++) {
     let x = P.getX(i), y = P.getY(i), z = P.getZ(i);
-    const t = Math.max(0, -y / R); // 0 at the equator, 1 at the chin
+    const ny = y / R, t = Math.max(0, -ny), u = Math.max(0, ny), front = Math.max(0, z / R);
     let xs = 1, zs = 1, ys = 1;
-    if (L.jaw === 'pointy') { const k = Math.pow(t, 1.4); xs = 1 - 0.34 * k; zs = 1 - 0.2 * k; ys = 1 + 0.1 * k; }
-    else if (L.jaw === 'soft') { xs = 1 + 0.07 * Math.sin(Math.min(1, t * 1.3) * Math.PI) - 0.1 * t * t * t; zs = 1 - 0.04 * t; }
-    else if (L.jaw === 'square') { xs = 1 + 0.11 * Math.sin(Math.min(1, t * 1.5) * Math.PI / 2) - 0.12 * Math.pow(t, 6); zs = 1 + 0.04 * t; ys = 1 - 0.06 * t; }
-    else { xs = 1 - 0.05 * t; ys = 1 + 0.02 * t; }
-    // egg shape: a little wider across the cheeks than the crown
-    if (y > 0) { xs *= 1 - 0.06 * (y / R); }
-    P.setXYZ(i, x * xs * hw, y * ys * hh, z * zs);
-    const nx = N.getX(i) / hw, ny = N.getY(i) / hh, nz = N.getZ(i), l = Math.hypot(nx, ny, nz) || 1;
-    N.setXYZ(i, nx / l, ny / l, nz / l);
+    xs -= S.low * Math.pow(t, S.lowPow); xs += S.up * u;                       // jaw taper / forehead width
+    zs -= (S.zLow ?? 0.08) * Math.pow(t, 1.5) * 0.6;
+    ys += S.chinY * t;                                                         // longer chin
+    xs += cheek * Math.sin(Math.min(1, t * 1.6) * Math.PI) * 0.9;              // cheek fullness around mid-lower face
+    if (u > 0) xs *= 1 - 0.05 * u;                                             // egg: crown a touch narrower
+    let nx = x * xs * hw, ny2 = y * ys * hh, nz = z * zs;
+    if (S.flat && ny2 < -R * S.flat * hh) ny2 = -R * S.flat * hh + (ny2 + R * S.flat * hh) * 0.15; // flat jaw line
+    nz += chin * 0.055 * sm(t, 0.35, 1) * front;                               // chin juts forward / recedes
+    nz += brow * 0.04 * sm(u, 0.15, 0.7) * (1 - sm(u, 0.7, 1)) * front;        // brow ridge
+    P.setXYZ(i, nx, ny2, nz);
+    const gx = N.getX(i) / hw, gy = N.getY(i) / hh, gz = N.getZ(i), l = Math.hypot(gx, gy, gz) || 1;
+    N.setXYZ(i, gx / l, gy / l, gz / l);
   }
   g.computeBoundingSphere();
   geoCache.set(key, g);

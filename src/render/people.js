@@ -133,13 +133,17 @@ function buildFace(head, L) {
     else ball(head, L.ears === 'big' ? 0.07 : 0.05, skin, s * 0.198 * hw, -0.01, 0, 0.5, 1, 0.9, 2);
   }
   const ex = L.eyeGap, ey = 0.02 + L.eyeY;
-  // nose (painted shading for 'button' lives in the face texture; bigger noses are soft geometry)
-  const nz = zAt(0, -0.04), nc = tint(skin, -0.08);
-  if (L.nose === 'button') ball(head, 0.027, nc, 0, -0.04, nz + 0.012, 1, 1, 1, 1);
-  if (L.nose === 'big') ball(head, 0.048, nc, 0, -0.04, nz + 0.015, 1, 1.05, 1.05, 1);
-  if (L.nose === 'long') { box(head, 0.032, 0.09, 0.05, nc, 0, -0.09, nz - 0.005, 0.015); ball(head, 0.03, nc, 0, -0.06, nz + 0.04, 1, 1, 1, 1); }
-  if (L.nose === 'pointy') { const n = cone(head, 0.03, 0.09, nc, 0, -0.04, nz + 0.03); n.rotation.x = Math.PI / 2 + 0.2; }
-  if (L.nose === 'hook') { box(head, 0.03, 0.07, 0.04, nc, 0, -0.04, nz, 0.012); const n = cone(head, 0.03, 0.06, nc, 0, -0.085, nz + 0.03); n.rotation.x = Math.PI + 0.5; }
+  // nose: soft ellipsoids (the 'button' nose also has painted shading in the face texture)
+  const nz = zAt(0, -0.04) - 0.012, nc = tint(skin, -0.05);
+  const nose = (w, h, d, y, tilt = 0, tip = 0) => {
+    const m = ell(head, w, h, d, nc, 0, y, nz + d * 0.3, 16); m.rotation.x = tilt;
+    if (tip) ell(head, w * 0.9, tip, d * 0.8, nc, 0, y - h * 0.42, nz + d * 0.62, 14);
+  };
+  if (L.nose === 'button') nose(0.05, 0.044, 0.046, -0.042);
+  if (L.nose === 'big') nose(0.085, 0.07, 0.07, -0.046);
+  if (L.nose === 'long') nose(0.05, 0.115, 0.06, -0.06, 0.12);
+  if (L.nose === 'pointy') nose(0.04, 0.095, 0.07, -0.056, 0.3);
+  if (L.nose === 'hook') nose(0.046, 0.08, 0.055, -0.052, 0.05, 0.04);
   // facial hair
   const fh = L.facial, fc = L.facialColor ?? L.hair;
   if (fh === 'full') { ball(head, 0.17, fc, 0, -0.12, 0.05, hw, 0.85, 0.82, 1); for (const s of [-1, 1]) ball(head, 0.075, fc, s * 0.14 * hw, -0.02, 0.06, 0.7, 1.4, 0.8, 1); }

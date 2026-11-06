@@ -6,7 +6,7 @@ export const START_DATE = { year: 1216, season: 2, day: 12 }; // Autumn 1216
 export const FAMILY = [
   { id: 'sam', name: 'Sam', role: 'Father', species: 'human', age: 38, scale: 1.0, headScale: 1.0,
     look: { skin: 0xe6b08a, hair: 0x5b3a29, hairStyle: 'short', facial: 'full', outfit: 'tunic', shirt: 0x4f7a9c, pants: 0x6b5a48,
-      eyes: 'dot', brows: 'thick', nose: 'big', mouth: 'flat', jaw: 'square', headW: 1.05, build: 1.1 },
+      eyes: 'dot', brows: 'thick', nose: 'big', mouth: 'flat', jaw: 'square', chin: 0.3, brow: 0.2, headW: 1.05, build: 1.1 },
     start: { x: 0.4, z: 0.7, yaw: -0.6 },
     bio: 'A man of few words and steady hands. He has lived his whole life in the Eastwood and never seen a town bigger than the market village.',
     traits: ['hardworking', 'quiet', 'practical'], likes: ['resting', 'cooking'], dislikes: ['music'],
@@ -26,7 +26,7 @@ export const FAMILY = [
 
   { id: 'maya', name: 'Maya', role: 'Mother', species: 'human', age: 36, scale: 0.95, headScale: 1.0,
     look: { skin: 0xc68a65, hair: 0x2e2a33, hairStyle: 'braid', outfit: 'gown', shirt: 0x9a4a6a, headwear: 'coif', headwearColor: 0xf0e8d4,
-      eyes: 'wide', eyeColor: 0x3a2a1c, brows: 'arched', nose: 'button', mouth: 'smile', jaw: 'pointy', headW: 0.97, accessories: ['earring'] },
+      eyes: 'wide', eyeColor: 0x3a2a1c, brows: 'arched', nose: 'button', mouth: 'smile', jaw: 'heart', chin: 0.1, headW: 0.97, accessories: ['earring'] },
     start: { x: 1.0, z: -1.8, yaw: 2.4 },
     bio: 'Sharp-eyed and endlessly curious. She learned herb-lore from her grandmother and keeps a book of remedies she has never let anyone else read.',
     traits: ['curious', 'kind', 'tidy'], likes: ['gardening', 'reading', 'socializing'], dislikes: ['music'],
