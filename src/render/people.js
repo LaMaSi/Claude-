@@ -238,11 +238,11 @@ const gMat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.9
 const ss = THREE.MathUtils.smoothstep;
 const band = (v, a, b, e = 0.012) => ss(v, a - e, a + e) * (1 - ss(v, b - e, b + e)); // 1 between a and b
 function paintedGarment(parent, g, key, paint) {
-  const crv = new THREE.SplineCurve(GARMENT[key].map(([r, y]) => new THREE.Vector2(r, y))).getPoints(110).reverse();
-  const geo = new THREE.LatheGeometry(crv, 56), P = geo.attributes.position, C3 = new Float32Array(P.count * 3), c = new THREE.Color();
+  const crv = new THREE.SplineCurve(GARMENT[key].map(([r, y]) => new THREE.Vector2(r, y))).getPoints(220).reverse();
+  const geo = new THREE.LatheGeometry(crv, 144), P = geo.attributes.position, C3 = new Float32Array(P.count * 3), c = new THREE.Color();
   for (let i = 0; i < P.count; i++) {
     const x = P.getX(i), y = P.getY(i), z = P.getZ(i), th = Math.atan2(x, z); // th = 0 at the front (+z), +/-pi at the back
-    paint(c, y, Math.abs(th)); C3[i * 3] = c.r; C3[i * 3 + 1] = c.g; C3[i * 3 + 2] = c.b;
+    paint(c, y, Math.abs(th), th); C3[i * 3] = c.r; C3[i * 3 + 1] = c.g; C3[i * 3 + 2] = c.b;
   }
   geo.setAttribute('color', new THREE.BufferAttribute(C3, 3));
   const m = new THREE.Mesh(geo, gMat); m.scale.set(g, 1, 0.82); m.castShadow = m.receiveShadow = true; parent.add(m); return m;
@@ -256,11 +256,11 @@ function buildRay({ look, scale = 1, headScale = 1 }) {
   parts.legL.position.set(-0.1, 0.5, 0); parts.legR.position.set(0.1, 0.5, 0); pivot.add(parts.legL, parts.legR);
   const body = new THREE.Group(); pivot.add(body); parts.body = body;
   const K = { shirt: new THREE.Color(shirt), cream: new THREE.Color(C.cream), leather: new THREE.Color(C.leather), gold: new THREE.Color(C.gold),
-    trim: new THREE.Color(trim), ochre: new THREE.Color(C.woolOchre), cloak: new THREE.Color(L.cloak ?? 0) };
+    trim: new THREE.Color(trim), steel: new THREE.Color(0xa9b2bf), steelD: new THREE.Color(0x6f7886), steelL: new THREE.Color(0xd2d9e2), brown: new THREE.Color(0x6e4a30), ochre: new THREE.Color(C.woolOchre), cloak: new THREE.Color(L.cloak ?? 0) };
   const mix = (c, k, w) => { if (w > 0.001) c.lerp(K[k], w); };
-  const key = outfit === 'gown' || outfit === 'dress' ? 'bell' : outfit === 'robe' || outfit === 'noble' ? 'long' : 'short';
-  paintedGarment(body, g, key, (c, y, a) => {
-    c.copy(outfit === 'jerkin' ? K.cream : K.shirt);
+  const key = outfit === 'knight' || outfit === 'adventurer' || outfit === 'ranger' ? 'short' : outfit === 'gown' || outfit === 'dress' ? 'bell' : outfit === 'robe' || outfit === 'noble' ? 'long' : 'short';
+  paintedGarment(body, g, key, (c, y, a, th) => {
+    c.copy(outfit === 'jerkin' ? K.cream : outfit === 'knight' ? K.steel : K.shirt);
     if (L.cloak != null) mix(c, 'cloak', band(y, 0.12, 0.99) * ss(a, 1.85, 2.25)); // cloak: a strip down the back
     const hem = band(y, 0.1, 0.19), belt = (a0, a1) => band(y, a0, a1);
     if (outfit === 'gown' || outfit === 'dress') {
@@ -274,11 +274,24 @@ function buildRay({ look, scale = 1, headScale = 1 }) {
       mix(c, 'leather', band(y, 0.19, 0.62) * (1 - ss(a, 0.6, 0.68))); mix(c, 'leather', band(y, 0.62, 0.9) * (1 - ss(a, 0.34, 0.4))); mix(c, 'leather', belt(0.5, 0.56));
     } else if (outfit === 'jerkin') {
       mix(c, 'trim', band(y, 0.42, 0.94) * ss(a, 0.26, 0.32)); mix(c, 'leather', belt(0.53, 0.58));
+    } else if (outfit === 'knight') { // plate armour with a heraldic tabard, gorget, pauldron edges and a hem skirt
+      mix(c, 'steelD', band(y, 0.1, 0.2)); mix(c, 'steelD', band(y, 0.86, 1.05));
+      mix(c, 'trim', band(y, 0.2, 0.86) * (1 - ss(a, 0.5, 0.58)));                                   // tabard
+      mix(c, 'cream', band(y, 0.3, 0.78) * (1 - ss(a, 0.05, 0.08)) + band(y, 0.58, 0.66) * (1 - ss(a, 0.2, 0.24))); // cross emblem
+      mix(c, 'leather', belt(0.5, 0.56)); mix(c, 'gold', band(y, 0.5, 0.56) * (1 - ss(a, 0.08, 0.12)));
+      mix(c, 'steelD', band(y, 0.7, 0.9) * band(a, 1.2, 1.95, 0.06)); mix(c, 'gold', band(y, 0.7, 0.73) * band(a, 1.2, 1.95, 0.06));
+    } else if (outfit === 'adventurer') { // leather vest over a shirt, bandolier, belt, scarf
+      mix(c, 'brown', band(y, 0.38, 0.94) * ss(a, 0.2, 0.26)); mix(c, 'leather', belt(0.5, 0.56)); mix(c, 'brown', band(y, 0.1, 0.17));
+      mix(c, 'cream', band(y + 0.18 * th, 0.62, 0.7) * (1 - ss(a, 1.3, 1.5)) * 0.0); mix(c, 'leather', band(y + 0.2 * th, 0.58, 0.68) * (1 - ss(a, 1.3, 1.5)));
+      mix(c, 'gold', band(y + 0.2 * th, 0.62, 0.64) * (1 - ss(a, 1.3, 1.5)) * 0.8);
+    } else if (outfit === 'ranger') { // forest tunic with a cross harness and a patterned hem
+      mix(c, 'brown', band(y, 0.1, 0.18)); mix(c, 'leather', belt(0.5, 0.56)); mix(c, 'leather', band(y + 0.18 * th, 0.6, 0.67) * (1 - ss(a, 1.3, 1.5)) + band(y - 0.18 * th, 0.6, 0.67) * (1 - ss(a, 1.3, 1.5)));
+      mix(c, 'gold', band(y, 0.5, 0.56) * (1 - ss(a, 0.08, 0.12)));
     } else { // tunic
       mix(c, 'cream', hem); mix(c, 'leather', belt(0.52, 0.58)); mix(c, 'gold', band(y, 0.52, 0.58) * (1 - ss(a, 0.1, 0.15)));
     }
   });
-  const collarC = outfit === 'robe' ? tint(shirt, -0.2) : outfit === 'noble' ? trim : outfit === 'smith' ? shirt : C.cream;
+  const collarC = outfit === 'knight' ? 0x6f7886 : outfit === 'adventurer' ? trim : outfit === 'ranger' ? 0x6e4a30 : outfit === 'robe' ? tint(shirt, -0.2) : outfit === 'noble' ? trim : outfit === 'smith' ? shirt : C.cream;
   { const m = collarMesh(body, g * 1.2, collarC, 1); m.position.y = -0.02; }
 
   for (const [name, sx] of [['armL', -1], ['armR', 1]]) { // floating sphere hands (the arm group is just the swing pivot)

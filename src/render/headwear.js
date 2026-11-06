@@ -22,14 +22,20 @@ function latheHat(pts, color, { bandColor = null, bandY = [0, 0], bend = 0, tilt
 }
 
 export function buildHat(head, L) {
-  const k = L.headwear, col = L.headwearColor, hw = L.headW, hh = L.headH;
+  const k = L.headwear; let col = L.headwearColor; const hw = L.headW, hh = L.headH;
   if (!k || k === 'circlet') return;
+  if (k === 'helm') col = 0xaeb6c2;
   const base = { rx: 0.205 * hw, ry: 0.205 * hh, rz: 0.205, cy: 0, color: col };
   const parts = [];
   const add = (geo, x = 0, y = 0, z = 0) => parts.push({ geo, pos: [x, y, z] });
   const sh = (o) => add(shell({ ...base, ...o }));
   const bangW = (az) => 1 - sstep(Math.abs(az), 0.8, 1.5);
 
+  if (k === 'helm') { // open-faced steel helmet: domed cap, back/neck guard, central ridge and a brow band
+    const ridge = (az, u) => 0.03 * (1 - sstep(Math.min(Math.abs(az), PI - Math.abs(az)), 0.0, 0.22)) * (1 - sstep(u, 0.0, 0.7));
+    sh({ yEnd: prof([[0, 0.085], [0.8, 0.07], [1.3, -0.04], [1.8, -0.15], [PI, -0.2]]), thick: (az, u) => 0.032 + ridge(az, u) + 0.008 * (1 - u), flare: 0.1 });
+    sh({ yEnd: prof([[0, 0.085], [0.8, 0.07], [1.3, 0.04], [1.8, 0.04], [PI, 0.04]]), el0: 1.0, thick: () => 0.048, color: 0xd9b25a, rows: 6 }); // brow band
+  }
   if (k === 'coif') sh({ yEnd: prof([[0, 0.12], [0.7, 0.1], [1.2, -0.03], [1.7, -0.13], [2.4, -0.13], [PI, -0.1]]), thick: (az, u) => 0.036 + 0.01 * (1 - u), flare: 0.04 });
   if (k === 'kerchief') {
     sh({ yEnd: prof([[0, 0.1], [0.9, 0.04], [1.4, -0.03], [2.0, -0.08], [PI, -0.1]]), thick: (az, u) => 0.036 + 0.012 * (1 - u) });

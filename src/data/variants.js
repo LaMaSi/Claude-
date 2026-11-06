@@ -44,4 +44,12 @@ export const VARIANTS = [
     look: { skin: P.fair, hair: 0xb8b8bc, hairStyle: 'receding', headW: 1.1, jaw: 'pear', cheek: 0.1, eyes: 'wide', eyeColor: 0x6a8aa8, brows: 'bushy', browColor: 0xb8b8bc, nose: 'big', mouth: 'open', facial: 'mutton', outfit: 'noble', shirt: 0x9a2a2a, trim: 0xe0b24a, cloak: 0x2a3f7a, headwear: 'flatcap', headwearColor: 0x2a3f7a, build: 1.15 } },
   { name: 'Fenn', role: 'Wanderer', note: 'topknot, sleepy eyes', scale: 0.97, headScale: 1.0,
     look: { eyeTilt: -0.3, skin: P.olive, hair: 0x2a2024, hairStyle: 'topknot', headW: 0.98, jaw: 'oval', chin: -0.2, eyes: 'sleepy', brows: 'thin', nose: 'button', mouth: 'smirk', blush: false, accessories: ['earring'], outfit: 'jerkin', trim: 0x4a7a5a, cloak: 0x5a4a3a, build: 0.9 } },
+  { name: 'Sir Aldric', role: 'Knight', note: 'plate armour, red tabard', scale: 1.08, headScale: 1.0,
+    look: { skin: P.fair, hair: 0x5a4030, hairStyle: 'short', jaw: 'square', chin: 0.5, brow: 0.4, headW: 1.05, eyes: 'dot', brows: 'thick', nose: 'button', mouth: 'flat', outfit: 'knight', trim: 0xb8433f, build: 1.2, cloak: 0x7a2a2a } },
+  { name: 'Dame Brienne', role: 'Knight', note: 'helmet, blue tabard', scale: 1.0, headScale: 1.0,
+    look: { skin: P.tan, hair: 0x2a2024, hairStyle: 'ponytail', jaw: 'oval', headW: 1.0, eyes: 'narrow', brows: 'thin', nose: 'button', mouth: 'smirk', headwear: 'helm', outfit: 'knight', trim: 0x3f5f9a, build: 1.1 } },
+  { name: 'Kira', role: 'Adventurer', note: 'bandolier, red scarf', scale: 0.95, headScale: 1.0,
+    look: { skin: P.olive, hair: 0x7a3a22, hairStyle: 'messy', jaw: 'heart', chin: 0.2, headW: 0.98, eyes: 'big', eyeColor: 0x3a7a5a, brows: 'arched', nose: 'button', mouth: 'grin', freckles: 4, outfit: 'adventurer', shirt: 0xe8dcc0, trim: 0xb8433f, cloak: 0x4a5a3a } },
+  { name: 'Finn', role: 'Ranger', note: 'hooded, harness', scale: 1.0, headScale: 1.0,
+    look: { skin: P.fair, hair: 0x6b5a48, hairStyle: 'short', jaw: 'long', headW: 0.97, eyes: 'narrow', brows: 'angry', nose: 'pointy', mouth: 'smirk', headwear: 'hood', headwearColor: 0x4a6a44, outfit: 'ranger', shirt: 0x5f8a58, facial: 'goatee', cloak: 0x4a6a44 } },
 ];

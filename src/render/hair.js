@@ -107,7 +107,7 @@ export function blob(r, color, sx = 1, sy = 1, sz = 1) {
 }
 
 // ---- styles --------------------------------------------------------------------------------------------------------
-export const COVERS = new Set(['coif', 'hood', 'kerchief', 'bakerhat', 'pointed', 'strawhat', 'flatcap']);
+export const COVERS = new Set(['coif', 'hood', 'kerchief', 'bakerhat', 'pointed', 'strawhat', 'flatcap', 'helm']);
 
 export function buildHairMeshes(L) {
   const { hairStyle: st, hair: c, headW: hw, headH: hh, headwear } = L;
