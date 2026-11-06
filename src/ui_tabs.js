@@ -3,7 +3,7 @@ import { TRAITS, SKILLS, TAGS } from './data/traits.js';
 import { stepProgress, bondLabel, moodLabel } from './sim/life.js';
 
 export const TABS = [
-  { id: 'needs', icon: '🍖', label: 'Needs' }, { id: 'bonds', icon: '💞', label: 'Bonds' }, { id: 'wishes', icon: '⭐', label: 'Wishes' },
+  { id: 'needs', icon: 'gi:cauldron', label: 'Needs' }, { id: 'bonds', icon: '💞', label: 'Bonds' }, { id: 'wishes', icon: '⭐', label: 'Wishes' },
   { id: 'likes', icon: '❤️', label: 'Likes' }, { id: 'skills', icon: '🛡️', label: 'Skills' }, { id: 'work', icon: '🔨', label: 'Work' },
   { id: 'past', icon: '📜', label: 'Past' },
 ];

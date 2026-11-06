@@ -25,8 +25,17 @@
   #clockbox { position: fixed; top: calc(8px + env(safe-area-inset-top)); right: 10px; display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
   #clockrow { display: flex; gap: 6px; }
   .pill { padding: 5px 13px; border-radius: 999px; font-family: var(--title); font-weight: 800; font-size: 15px; letter-spacing: .03em; color: var(--goldhi); }
-  #pxbtn { opacity: .75; } #pxbtn.on { opacity: 1; color: #fff1c4; box-shadow: 0 0 10px rgba(240,205,118,.6), 0 4px 14px rgba(0,0,0,.55); }
+  #optbtn { width: 38px; padding: 5px 0; font-size: 19px; line-height: 1; display: flex; align-items: center; justify-content: center; } #optbtn.open { color: #fff1c4; }
   #clock { font-variant-numeric: tabular-nums; }
+  #optpop { display: none; border-radius: 14px; padding: 10px 14px 9px; width: 264px; box-sizing: border-box; } #optpop.open { display: block; }
+  #optpop .oh { font-family: var(--title); font-weight: 800; font-size: 17px; color: var(--goldhi); margin-bottom: 6px; }
+  .orow { white-space: nowrap; display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 6px 0; font-size: 14px; font-weight: 700; color: var(--text); }
+  .sw { width: 46px; height: 26px; border-radius: 999px; background: #120c08; border: 2px solid #6b4f28; position: relative; flex: none; }
+  .sw i { position: absolute; top: 2px; left: 2px; width: 18px; height: 18px; border-radius: 50%; background: #8c7a55; transition: left .15s, background .15s; }
+  .sw[aria-checked=true] { border-color: var(--gold); } .sw[aria-checked=true] i { left: 22px; background: var(--goldhi); }
+  .seg { display: inline-flex; border: 2px solid #6b4f28; border-radius: 8px; overflow: hidden; } .seg button { padding: 4px 9px; font-size: 12.5px; font-weight: 800; color: #bfae86; background: #120c08; } .seg button.on { background: var(--gold); color: #1d1510; }
+  #pxsizes.off { opacity: .45; pointer-events: none; }
+  .ocred { margin-top: 6px; font-size: 10.5px; line-height: 1.3; color: #a99872; font-weight: 600; }
   #timepop { display: none; border-radius: 14px; padding: 9px 13px; }
   #timepop.open { display: block; }
   #time { width: 200px; accent-color: var(--gold); }
@@ -49,14 +58,14 @@
   #pbody::after { content: ''; position: absolute; top: 0; left: 14px; right: 14px; height: 1px; background: linear-gradient(90deg, transparent, var(--gold) 20%, var(--gold) 80%, transparent); }
   #needs { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
   .need { display: flex; flex-direction: column; align-items: center; gap: 4px; font-size: 12px; font-weight: 700; color: #d6c59c; }
-  .need .ico { font-size: 20px; line-height: 1; filter: saturate(.85); }
-  .need .bar { position: relative; width: 100%; max-width: 36px; height: 62px; background: rgba(0,0,0,.55); border: 2px solid #8a6a32; border-radius: 10px 10px 8px 8px; overflow: hidden; box-shadow: inset 0 0 6px rgba(0,0,0,.8); }
-  .need .fill { position: absolute; left: 0; right: 0; bottom: 0; height: 50%; background: linear-gradient(90deg, #4f9a5c, #74c47e 45%, #4f9a5c); transition: height .25s linear; }
-  .need .bar::after { content: ''; position: absolute; top: 3px; left: 4px; width: 5px; bottom: 6px; border-radius: 4px; background: linear-gradient(rgba(255,255,255,.25), rgba(255,255,255,0)); }
-  .need.mid .fill { background: linear-gradient(90deg, #c88a2c, #f0b64a 45%, #c88a2c); }
-  .need.low .fill { background: linear-gradient(90deg, #a83a32, #de5a4c 45%, #a83a32); }
+  .need .ico { width: 30px; height: 30px; font-size: 28px; color: #e2c98a; display: flex; align-items: center; justify-content: center; }
+  .need .bar { position: relative; width: 100%; max-width: 34px; height: 62px; background: #120c08; border: 3px solid #6b4f28; border-radius: 5px; overflow: hidden; box-shadow: inset 0 0 0 1px #000, 0 1px 0 rgba(240,205,118,.25); }
+  .need .fill { position: absolute; left: 0; right: 0; bottom: 0; height: 50%; background: #86a35a; transition: height .25s linear; }
+  .need .bar::after { content: ''; position: absolute; inset: 0; pointer-events: none; background: repeating-linear-gradient(to top, transparent 0 9px, rgba(8,5,3,.55) 9px 11px); } /* carved measuring notches */
+  .need.mid .fill { background: #d09a3c; }
+  .need.low .fill { background: #b24a3c; }
   .need.low .bar { animation: pulse 1.1s infinite; }
-  @keyframes pulse { 50% { border-color: #de5a4c; box-shadow: inset 0 0 6px rgba(0,0,0,.8), 0 0 8px rgba(222,90,76,.6); } }
+  @keyframes pulse { 50% { border-color: #de5a4c; box-shadow: inset 0 0 0 1px #000, 0 0 8px rgba(222,90,76,.6); } }
 
   #portraits { display: flex; gap: 12px; justify-content: center; padding: 8px 14px 5px; border-radius: 18px; }
   .port { position: relative; display: flex; flex-direction: column; align-items: center; gap: 3px; font-family: var(--title); color: #cdbb90; font-size: 15px; font-weight: 800; letter-spacing: .02em; width: 68px; }
@@ -70,15 +79,16 @@
   #panel { display: flex; flex-direction: column; max-height: min(58vh, 430px); }
   #tabs { display: flex; padding: 0 8px; gap: 2px; }
   .tab { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 1px; padding: 5px 0 4px; border-radius: 10px 10px 0 0; color: #bfae86; opacity: .8; border-bottom: 3px solid transparent; }
-  .tab .ti { font-size: 19px; line-height: 1; } .tab .tl { font-size: 10.5px; font-weight: 800; }
+  .gi { width: 1em; height: 1em; display: inline-block; vertical-align: -.14em; flex: none; }
+  .tab .ti { font-size: 23px; line-height: 1; height: 24px; display: flex; align-items: center; } .tab .tl { font-size: 10.5px; font-weight: 800; }
   .tab.on { color: var(--goldhi); opacity: 1; border-bottom-color: var(--goldhi); background: rgba(240,205,118,.08); }
   #pbody { overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; touch-action: pan-y; }
   #pbody::before, #pbody::after { display: none; }
   #pbody { border-top: 1px solid rgba(201,162,76,.55); padding: 10px 12px 14px; }
   .moodrow { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; font-size: 14px; font-weight: 700; }
   .moodrow #moodface { font-size: 24px; } .moodrow .mt { white-space: nowrap; } .moodrow .mt b { color: var(--goldhi); }
-  .mbar { flex: 1; height: 10px; background: rgba(0,0,0,.55); border: 2px solid #8a6a32; border-radius: 8px; overflow: hidden; }
-  .mbar i { display: block; height: 100%; width: 70%; background: linear-gradient(90deg, #c88a2c, #f0cd76); transition: width .3s; }
+  .mbar { flex: 1; height: 12px; background: #120c08; border: 3px solid #6b4f28; border-radius: 4px; overflow: hidden; box-shadow: inset 0 0 0 1px #000; }
+  .mbar i { display: block; height: 100%; width: 70%; background: #d9b05a; transition: width .3s; }
   #datetxt { font-family: var(--title); font-weight: 800; font-size: 14px; color: var(--goldhi); margin-bottom: 4px; text-align: center; }
 
   /* tab content */
@@ -90,8 +100,8 @@
   .nm { color: #f6ead0; font-size: 14px; font-weight: 800; } .note { color: #cdbb90; font-size: 12.5px; margin-top: 2px; }
   .rt { display: flex; align-items: baseline; gap: 8px; } .right { margin-left: auto; } .good { color: #8fd18f; } .bad { color: #e07a6e; }
   .ico { font-size: 22px; width: 28px; text-align: center; } .av { width: 46px; height: 46px; border-radius: 50%; overflow: hidden; border: 2px solid #5b4426; background: radial-gradient(#4a3a2c, #1d1510); flex: none; } .av img { width: 100%; height: 100%; display: block; }
-  .mini { height: 8px; background: rgba(0,0,0,.55); border: 1px solid #8a6a32; border-radius: 6px; overflow: hidden; margin: 5px 0 3px; } .mini i { display: block; height: 100%; background: linear-gradient(90deg, #4f9a5c, #74c47e); }
-  .mini.heart i { background: linear-gradient(90deg, #b8434f, #ef7a8a); } .mini.bad i { background: linear-gradient(90deg, #6a3a3a, #a83a32); } .mini.gold i { background: linear-gradient(90deg, #c88a2c, #f0cd76); } .mini.xp i { background: linear-gradient(90deg, #4a7a9c, #7ab4dc); }
+  .mini { height: 9px; background: #120c08; border: 2px solid #6b4f28; border-radius: 3px; overflow: hidden; margin: 5px 0 3px; } .mini i { display: block; height: 100%; background: #86a35a; }
+  .mini.heart i { background: #c95a68; } .mini.bad i { background: #a83a32; } .mini.gold i { background: #d9b05a; } .mini.xp i { background: #5f8fb0; }
   .rs { display: flex; justify-content: space-between; font-size: 12px; font-weight: 700; }
   .wish, .step { display: flex; gap: 8px; padding: 6px 4px; font-size: 13.5px; font-weight: 600; border-bottom: 1px dashed rgba(201,162,76,.25); } .step { padding: 3px 0; border: 0; font-size: 13px; }
   .wish .ck, .step .ck { color: var(--goldhi); width: 16px; text-align: center; } .wish.done, .step.done { color: #8fd18f; text-decoration: line-through; opacity: .8; }
@@ -104,13 +114,18 @@
   .hint { margin: 8px 0 2px; font-size: 12px; color: #a99872; line-height: 1.35; }
   .timeline { position: relative; padding-left: 4px; } .timeline::before { content: ''; position: absolute; left: 17px; top: 6px; bottom: 6px; width: 2px; background: rgba(201,162,76,.35); }
   .ev { display: flex; gap: 10px; padding: 5px 0; font-size: 13px; font-weight: 600; color: #f0e4c4; } .evi { width: 28px; height: 28px; border-radius: 50%; background: #2f2218; border: 2px solid #8a6a32; display: flex; align-items: center; justify-content: center; font-size: 14px; position: relative; flex: none; }
+  .ico, .chip b, .evi, .kv span .gi { color: #e2c98a; } .evi .gi { font-size: 15px; } .moodrow #moodface { color: var(--goldhi); display: flex; }
   .evd { font-size: 11.5px; font-weight: 800; color: #b9a77e; }
 </style>
 </head>
 <body>
 <div id="vignette"></div>
 <div id="clockbox">
-  <div id="clockrow"><button class="pill wood" id="clock">21:30</button><button class="pill wood" id="pxbtn" title="Pixel-art view">▦</button><button class="pill wood" id="play">Auto</button></div>
+  <div id="clockrow"><button class="pill wood" id="clock">21:30</button><button class="pill wood" id="optbtn" title="Options" aria-label="Options"></button><button class="pill wood" id="play">Auto</button></div>
+  <div id="optpop" class="wood"><div class="oh">Options</div>
+    <div class="orow"><span>Pixel-art look</span><button id="pxsw" class="sw" role="switch" aria-checked="false"><i></i></button></div>
+    <div class="orow" id="pxsizes"><span>Pixel size</span><span class="seg"><button data-s="2">Fine</button><button data-s="3">Mid</button><button data-s="4">Chunky</button></span></div>
+    <div class="ocred">Icons: game-icons.net by Lorc, Delapouite &amp; contributors (CC BY 3.0)</div></div>
   <div id="timepop" class="wood"><div id="datetxt"></div><input id="time" type="range" min="0" max="24" step="0.01" value="21.5"></div>
 </div>
 <div id="dock">

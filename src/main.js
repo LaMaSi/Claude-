@@ -9,6 +9,7 @@ import { createCameraRig } from './input.js';
 import { renderPortraits } from './render/portraits.js';
 import { createUI } from './ui.js';
 import { createPixelPass } from './render/pixelate.js';
+import { ic } from './ui_icons.js';
 
 const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
@@ -137,7 +138,20 @@ function frame(now) {
 }
 requestAnimationFrame(frame);
 window.__pixel = pixel;
-const pxBtn = document.getElementById('pxbtn');
-pxBtn.addEventListener('click', () => { pixel.enabled = !pixel.enabled; pxBtn.classList.toggle('on', pixel.enabled); });
-pxBtn.classList.toggle('on', pixel.enabled);
+// ---- options menu (pixel-art look) --------------------------------------------------------------
+const optBtn = document.getElementById('optbtn'), optPop = document.getElementById('optpop'), pxSw = document.getElementById('pxsw'), pxSizes = document.getElementById('pxsizes');
+optBtn.innerHTML = ic('gi:cog');
+const store = { get: (k) => { try { return localStorage.getItem(k); } catch { return null; } }, set: (k, v) => { try { localStorage.setItem(k, v); } catch { /* private mode */ } } };
+function syncOptions() {
+  pxSw.setAttribute('aria-checked', String(pixel.enabled)); pxSizes.classList.toggle('off', !pixel.enabled);
+  for (const b of pxSizes.querySelectorAll('button')) b.classList.toggle('on', +b.dataset.s === pixel.size);
+}
+if (!params.has('px')) { // restore the saved preference unless the URL decides
+  if (store.get('ll.px') === '1') pixel.enabled = true;
+  const sz = +store.get('ll.pxsize'); if (sz >= 1 && sz <= 6) pixel.size = sz;
+}
+pixel.resize(window.innerWidth, window.innerHeight); syncOptions();
+optBtn.addEventListener('click', () => { const o = optPop.classList.toggle('open'); optBtn.classList.toggle('open', o); });
+pxSw.addEventListener('click', () => { pixel.enabled = !pixel.enabled; store.set('ll.px', pixel.enabled ? '1' : '0'); syncOptions(); });
+pxSizes.addEventListener('click', (e) => { const v = +e.target.dataset?.s; if (!v) return; pixel.size = v; store.set('ll.pxsize', String(v)); pixel.resize(window.innerWidth, window.innerHeight); syncOptions(); });
 window.__ready = true; window.__sim = sim; window.__rig = rig; window.__select = select;

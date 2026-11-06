@@ -1,8 +1,9 @@
 // Bottom-docked UI: portrait row (thumb zone), a tabbed character panel above it, and a small clock top-right.
 import { NEEDS } from './data/furniture.js';
-import { TABS, renderTab, moodFace } from './ui_tabs.js';
+import { TABS, renderTab } from './ui_tabs.js';
 import { moodLabel } from './sim/life.js';
 import { dateText } from './sim/life.js';
+import { ic, moodIcon } from './ui_icons.js';
 
 const ICON = { hunger: '🍖', social: '💬', hygiene: '🧼', fun: '🎲', sleep: '🌙' };
 const LABEL = { hunger: 'Hunger', social: 'Social', hygiene: 'Hygiene', fun: 'Fun', sleep: 'Rest' };
@@ -11,12 +12,12 @@ const hex = (n) => '#' + n.toString(16).padStart(6, '0');
 export function createUI({ sim, portraits, onSelect }) {
   const $ = (id) => document.getElementById(id);
   const panel = $('panel'), status = $('status'), ports = new Map(), needEls = new Map(), tabBtns = new Map(), panes = new Map();
-  let open = false, tab = 'needs', lastHtml = '';
+  let open = false, tab = 'needs', lastHtml = '', lastFace = '';
 
   // tab buttons + panes
   for (const t of TABS) {
     const b = document.createElement('button'); b.className = 'tab'; b.dataset.tab = t.id;
-    b.innerHTML = `<span class="ti">${t.icon}</span><span class="tl">${t.label}</span>`;
+    b.innerHTML = `<span class="ti">${ic(t.icon)}</span><span class="tl">${t.label}</span>`;
     b.addEventListener('click', () => setTab(t.id));
     $('tabs').append(b); tabBtns.set(t.id, b);
   }
@@ -26,7 +27,7 @@ export function createUI({ sim, portraits, onSelect }) {
   // needs vials
   for (const n of NEEDS) {
     const el = document.createElement('div'); el.className = 'need';
-    el.innerHTML = `<span class="ico">${ICON[n]}</span><div class="bar"><div class="fill"></div></div><span>${LABEL[n]}</span>`;
+    el.innerHTML = `<span class="ico">${ic(ICON[n])}</span><div class="bar"><div class="fill"></div></div><span>${LABEL[n]}</span>`;
     $('needs').append(el); needEls.set(n, el);
   }
   // portrait row
@@ -69,7 +70,7 @@ export function createUI({ sim, portraits, onSelect }) {
     if (!open) return;
     $('pname').textContent = sel.name; $('prole').textContent = `${sel.role} · age ${sel.age}`; $('pact').textContent = act;
     if (tab === 'needs') {
-      $('moodface').textContent = moodFace(sel.mood); $('moodtext').textContent = moodLabel(sel.mood);
+      const mf = moodIcon(sel.mood); if (mf !== lastFace) { $('moodface').innerHTML = mf; lastFace = mf; } $('moodtext').textContent = moodLabel(sel.mood);
       $('moodfill').style.width = `${Math.round(sel.mood * 100)}%`;
       for (const n of NEEDS) {
         const v = sel.needs[n], el = needEls.get(n);
@@ -78,7 +79,7 @@ export function createUI({ sim, portraits, onSelect }) {
       }
     } else {
       const html = renderTab(tab, sel, sim, portraits);
-      if (html !== lastHtml) { dyn.innerHTML = html; lastHtml = html; }
+      if (html !== lastHtml) { dyn.innerHTML = ic(html); lastHtml = html; }
     }
   }
   setOpen(false);
