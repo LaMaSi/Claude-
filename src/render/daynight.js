@@ -29,7 +29,7 @@ export function createLighting(scene) {
   scene.fog = new THREE.Fog(0xffffff, 40, 80);
   scene.background = new THREE.Color();
 
-  return function update(hour, world) {
+  const update = function (hour, world) {
     const sky = sample(SKY, hour);
     scene.background.copy(sky); scene.fog.color.copy(sky);
     // sun arc: rises 6, sets 19 ; moon takes over at night
@@ -53,4 +53,6 @@ export function createLighting(scene) {
     for (const g of world.windowGlass) { g.material.opacity = 0.3 + night * 0.25; g.material.emissiveIntensity = night * 0.9; }
     return night;
   };
+  update.sun = sun;
+  return update;
 }

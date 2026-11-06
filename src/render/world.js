@@ -2,7 +2,7 @@
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
 import { C, mat } from './palette.js';
-import { FURNITURE } from '../data/furniture.js';
+import { MODELS, SCENERY } from './furnitureModels.js';
 import * as M from './models.js';
 
 function plankTexture() {
@@ -67,7 +67,7 @@ function wall(group, axis, fixed, from, to, height, openings, thick = 0.22) {
 }
 
 export function buildWorld(scene, house) {
-  const world = { lamps: [], tvScreens: [], windowGlass: [], clouds: [], characters: [] };
+  const world = { lamps: [], tvScreens: [], windowGlass: [], clouds: [], furniture: [] };
   const { x0, x1, z0, z1, wallHeight } = house.room;
   const W = x1 - x0, D = z1 - z0;
 
@@ -105,39 +105,31 @@ export function buildWorld(scene, house) {
   walls.traverse((o) => { if (o.material && o.material.transparent) { o.castShadow = false; world.windowGlass.push(o); } });
 
   // furniture
-  for (const it of house.items) {
-    const def = FURNITURE[it.def];
-    const g = def.model(new THREE.Group());
+  house.items.forEach((it, index) => {
+    const g = MODELS[it.def](new THREE.Group());
     g.position.set(it.x, it.y ?? 0, it.z);
     g.rotation.y = it.rot ?? 0;
-    g.userData = { def: it.def };
+    g.userData = { def: it.def, itemIndex: index };
     scene.add(g);
+    world.furniture.push(g);
     g.traverse((o) => {
       if (o.userData.lampShade) world.lamps.push(o);
       if (o.userData.lampLight) world.lamps.push(o);
       if (o.userData.tvScreen) world.tvScreens.push(o);
     });
-  }
+  });
 
-  // scenery
-  const place = (obj, x, z, ry = 0) => { obj.position.set(x, 0, z); obj.rotation.y = ry; scene.add(obj); return obj; };
-  place(M.tree(1.5), 6.8, -3.8); place(M.tree(1.2), 7.4, 0.5); place(M.pine(1.6), -7.2, -4.5);
-  place(M.pine(1.3), -7.6, -2.0); place(M.tree(1.3), 5.2, -5.8); place(M.pine(1.2), 7.2, 4.4);
-  place(M.bush(1.1), -4.7, 3.8); place(M.bush(0.9), 4.8, 3.8); place(M.bush(1), 0.5, 4.2);
-  place(M.bush(1.2), 5.6, 2.2); place(M.bush(0.9), -6.4, -0.3);
-  for (const [x, z] of [[-4.9, 4.9], [-3.6, 4.7], [3.5, 4.8], [-6.5, 2.6], [5.5, 1.4], [1.8, 4.5]]) place(M.flowers(), x, z, x);
+  // scenery (data-driven so the nav grid and the renderer agree)
+  for (const sc of house.scenery) {
+    const obj = SCENERY[sc.type](sc.s);
+    obj.position.set(sc.x, 0, sc.z); obj.rotation.y = sc.type === 'flowers' ? sc.x : 0; scene.add(obj);
+  }
   // fence along the front
   for (let i = -7; i <= 7; i++) {
     const p = new THREE.Group(); M.box(p, 0.1, 0.55, 0.06, C.white, 0, 0, 0, 0.02);
     p.position.set(i * 1.1, 0, 6.2); scene.add(p);
   }
   const rail = new THREE.Group(); M.box(rail, 15.4, 0.06, 0.05, C.white, 0, 0.35, 0, 0.02); rail.position.set(0, 0, 6.2); scene.add(rail);
-
-  // characters (placeholder for scale; milestone 2 brings them to life)
-  for (const c of house.characters) {
-    const p = M.person(c.look); p.position.set(c.x, 0, c.z); p.rotation.y = c.rot; scene.add(p);
-    world.characters.push(p);
-  }
 
   // clouds
   for (let i = 0; i < 4; i++) {
