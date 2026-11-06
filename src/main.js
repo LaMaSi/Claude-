@@ -8,6 +8,7 @@ import { createCharactersView } from './render/charactersView.js';
 import { createCameraRig } from './input.js';
 import { renderPortraits } from './render/portraits.js';
 import { createUI } from './ui.js';
+import { createPixelPass } from './render/pixelate.js';
 
 const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
@@ -33,6 +34,8 @@ function select(id, focus = true) {
   sim.select(id);
   if (focus) { const c = sim.char(id); rig.focus(c.x, c.z); }
 }
+const pixel = createPixelPass(renderer, { size: Math.max(1, +params.get('px') || 2) });
+pixel.enabled = params.has('px') && params.get('px') !== '0';
 const ui = createUI({ sim, portraits: renderPortraits(sim.chars), onSelect: (id) => select(id) });
 
 const raycaster = new THREE.Raycaster();
@@ -82,7 +85,7 @@ const dock = document.getElementById('dock');
 let shift = (UI_BOTTOM - UI_TOP) / 2, shiftTarget = shift;
 function applyView() {
   const w = window.innerWidth, h = window.innerHeight;
-  camera.setViewOffset(w, h, 0, shift, w, h); rig.resize();
+  camera.setViewOffset(w, h, 0, shift, w, h); rig.resize(); pixel.resize(w, h);
 }
 function resize() {
   const w = window.innerWidth, h = window.innerHeight;
@@ -129,8 +132,12 @@ function frame(now) {
   if (markerT < 1) { markerT += dt / 0.7; marker.material.opacity = (1 - markerT) * 0.9; marker.scale.setScalar(1 + markerT * 1.2); }
   ui.update(dt);
   if (Math.abs(shift - shiftTarget) > 0.3) { shift += (shiftTarget - shift) * (1 - Math.exp(-dt * 9)); applyView(); }
-  renderer.render(scene, camera);
+  if (pixel.enabled) pixel.render(scene, camera); else renderer.render(scene, camera);
   requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);
+window.__pixel = pixel;
+const pxBtn = document.getElementById('pxbtn');
+pxBtn.addEventListener('click', () => { pixel.enabled = !pixel.enabled; pxBtn.classList.toggle('on', pixel.enabled); });
+pxBtn.classList.toggle('on', pixel.enabled);
 window.__ready = true; window.__sim = sim; window.__rig = rig; window.__select = select;
