@@ -4,10 +4,11 @@
 import * as THREE from 'three';
 import { box } from './models.js';
 import { C, mat } from './palette.js';
+import { HEAD_R, headGeometry, headMaterial } from './face.js';
 
 const tint = (hex, amt) => { const c = new THREE.Color(hex); return amt < 0 ? c.lerp(new THREE.Color(0), -amt).getHex() : c.lerp(new THREE.Color(0xffffff), amt).getHex(); };
-function ball(parent, r, color, x, y, z, sx = 1, sy = 1, sz = 1, detail = 2) {
-  const m = new THREE.Mesh(new THREE.IcosahedronGeometry(r, detail), mat(color));
+function ball(parent, r, color, x, y, z, sx = 1, sy = 1, sz = 1, detail = 3) {
+  const m = new THREE.Mesh(new THREE.IcosahedronGeometry(r, Math.max(2, detail)), mat(color, { flatShading: false }));
   m.position.set(x, y, z); m.scale.set(sx, sy, sz);
   m.castShadow = true; m.receiveShadow = true;
   parent.add(m); return m;
@@ -38,78 +39,30 @@ export const DEFAULT_LOOK = {
 // ---- face -------------------------------------------------------------------------------------------------------
 function buildFace(head, L) {
   const { skin, headW: hw, headH: hh } = L;
-  const R = 0.2, zAt = (x, y) => Math.sqrt(Math.max(0.0004, R * R - (x / hw) ** 2 - (y / hh) ** 2));
+  const R = HEAD_R, zAt = (x, y) => Math.sqrt(Math.max(0.0004, R * R - (x / hw) ** 2 - (y / hh) ** 2));
   const put = (m, x, y, dz = 0.004) => { m.position.set(x, y, zAt(x, y) + dz); m.rotation.y = Math.asin(THREE.MathUtils.clamp(x / (R * hw), -0.9, 0.9)); return m; };
-  const skinDark = tint(skin, -0.22), ink = C.black, browC = L.browColor ?? tint(L.hair, -0.1);
-  ball(head, R, skin, 0, 0, 0, hw, hh, 1);
+  const ink = C.black;
+  const skull = new THREE.Mesh(headGeometry(L), headMaterial(L)); skull.castShadow = true; skull.receiveShadow = true; head.add(skull);
 
-  // jaw shape
-  if (L.jaw === 'square') box(head, 0.27 * hw, 0.13, 0.2, skin, 0, -0.17, 0.02, 0.05);
-  if (L.jaw === 'pointy') ball(head, 0.12, skin, 0, -0.12, 0.07, 0.75 * hw, 1.15, 0.9, 1);
-  if (L.jaw === 'soft') for (const s of [-1, 1]) ball(head, 0.1, skin, s * 0.1 * hw, -0.08, 0.08, 1, 0.9, 0.9, 1);
-  // ears
+  // ears (soft)
   if (L.ears !== 'none') for (const s of [-1, 1]) {
     if (L.ears === 'pointy') { const e = cone(head, 0.05, 0.2, skin, s * 0.2 * hw, 0.05, 0); e.rotation.z = -s * 1.25; }
-    else ball(head, L.ears === 'big' ? 0.07 : 0.045, skin, s * 0.2 * hw, -0.01, 0, 0.55, 1, 0.9, 1);
+    else ball(head, L.ears === 'big' ? 0.07 : 0.05, skin, s * 0.198 * hw, -0.01, 0, 0.5, 1, 0.9, 2);
   }
-  // eyes
-  const ex = L.eyeGap, ey = 0.02 + L.eyeY, es = L.eyeSize;
-  for (const s of [-1, 1]) {
-    const x = s * ex, st = L.eyes;
-    if (st === 'dot') put(ball(head, 0.028 * es, ink, 0, 0, 0, 1, 1.3, 0.6, 1), x, ey);
-    else if (st === 'big' || st === 'wide') {
-      put(ball(head, 0.052 * es, C.white, 0, 0, 0, 1, 1.1, 0.45, 1), x, ey);
-      put(ball(head, (st === 'big' ? 0.036 : 0.028) * es, L.eyeColor, 0, 0, 0, 1, 1.05, 0.5, 1), x, ey, 0.014);
-      put(ball(head, 0.017 * es, ink, 0, 0, 0, 1, 1, 0.5, 0), x, ey, 0.022);
-      if (st === 'big') put(ball(head, 0.009, C.white, 0, 0, 0, 1, 1, 1, 0), x + s * -0.012, ey + 0.014, 0.03);
-    } else if (st === 'sleepy') {
-      put(ball(head, 0.028 * es, ink, 0, 0, 0, 1.1, 1, 0.6, 1), x, ey - 0.004);
-      put(box(head, 0.07 * es, 0.026, 0.02, skin, 0, 0, 0, 0.01), x, ey + 0.014, 0.012);
-    } else if (st === 'narrow') { const m = box(head, 0.07 * es, 0.013, 0.015, ink, 0, 0, 0, 0.005); put(m, x, ey); m.rotation.z = s * -0.12; }
-    else if (st === 'happy') {
-      for (const k of [-1, 1]) { const m = box(head, 0.035, 0.012, 0.015, ink, 0, 0, 0, 0.004); put(m, x + k * 0.016, ey + (k === -1 ? 0 : 0), 0.004); m.rotation.z = k * 0.6; m.position.y = ey + 0.004; }
-    }
-    // brows
-    const by = ey + 0.06 * (es > 1.1 ? 1.15 : 1), bs = L.brows;
-    if (bs !== 'none') {
-      const mk = (w, h, tilt, dx = 0, dy = 0) => { const m = box(head, w, h, 0.02, browC, 0, 0, 0, 0.006); put(m, x + dx, by + dy, 0.006); m.rotation.z = tilt; return m; };
-      if (bs === 'thin') mk(0.07, 0.012, 0);
-      if (bs === 'thick') mk(0.085, 0.026, 0);
-      if (bs === 'bushy') { mk(0.1, 0.04, s * 0.08); }
-      if (bs === 'arched') { mk(0.04, 0.014, s * -0.35, -s * 0.018, -0.004); mk(0.04, 0.014, s * 0.35, s * 0.018, -0.004); }
-      if (bs === 'angry') mk(0.08, 0.02, s * 0.38);
-      if (bs === 'worried') mk(0.07, 0.015, -s * 0.38);
-    }
-  }
-  // nose
+  const ex = L.eyeGap, ey = 0.02 + L.eyeY;
+  // nose (painted shading for 'button' lives in the face texture; bigger noses are soft geometry)
   const nz = zAt(0, -0.04), nc = tint(skin, -0.08);
   if (L.nose === 'button') ball(head, 0.027, nc, 0, -0.04, nz + 0.012, 1, 1, 1, 1);
   if (L.nose === 'big') ball(head, 0.048, nc, 0, -0.04, nz + 0.015, 1, 1.05, 1.05, 1);
   if (L.nose === 'long') { box(head, 0.032, 0.09, 0.05, nc, 0, -0.09, nz - 0.005, 0.015); ball(head, 0.03, nc, 0, -0.06, nz + 0.04, 1, 1, 1, 1); }
   if (L.nose === 'pointy') { const n = cone(head, 0.03, 0.09, nc, 0, -0.04, nz + 0.03); n.rotation.x = Math.PI / 2 + 0.2; }
   if (L.nose === 'hook') { box(head, 0.03, 0.07, 0.04, nc, 0, -0.04, nz, 0.012); const n = cone(head, 0.03, 0.06, nc, 0, -0.085, nz + 0.03); n.rotation.x = Math.PI + 0.5; }
-  // mouth
-  const my = -0.105, mm = L.mouth, lip = 0x8a4a3e;
-  const mpart = (w, h, x, y, rz = 0, color = lip) => { const m = box(head, w, h, 0.016, color, 0, 0, 0, 0.005); put(m, x, y, 0.003); m.rotation.z = rz; return m; };
-  if (mm === 'smile') { mpart(0.035, 0.013, 0, my - 0.006); mpart(0.026, 0.012, -0.03, my + 0.004, -0.5); mpart(0.026, 0.012, 0.03, my + 0.004, 0.5); }
-  if (mm === 'flat') mpart(0.06, 0.012, 0, my);
-  if (mm === 'smirk') { mpart(0.04, 0.012, -0.012, my - 0.004, 0.08); mpart(0.028, 0.012, 0.035, my + 0.006, 0.5); }
-  if (mm === 'frown') { mpart(0.035, 0.013, 0, my); mpart(0.025, 0.012, -0.03, my - 0.008, 0.5); mpart(0.025, 0.012, 0.03, my - 0.008, -0.5); }
-  if (mm === 'open') { mpart(0.06, 0.04, 0, my - 0.005, 0, 0x5a2a2a); mpart(0.04, 0.012, 0, my + 0.012, 0, C.white); }
-  if (mm === 'o') put(ball(head, 0.02, 0x5a2a2a, 0, 0, 0, 1, 1.2, 0.5, 1), 0, my);
-  if (mm === 'grin') { mpart(0.07, 0.028, 0, my - 0.002, 0, 0x5a2a2a); mpart(0.06, 0.012, 0, my + 0.01, 0, C.white); mpart(0.02, 0.012, -0.045, my + 0.012, -0.6); mpart(0.02, 0.012, 0.045, my + 0.012, 0.6); }
-  // cheeks and freckles
-  if (L.blush) for (const s of [-1, 1]) put(ball(head, 0.032, tint(skin, -0.05) === skin ? 0xf0a0a0 : 0xe8928e, 0, 0, 0, 1, 0.7, 0.4, 1), s * 0.125 * hw, -0.05, 0.002);
-  for (let i = 0; i < L.freckles; i++) {
-    const s = i % 2 ? 1 : -1, k = Math.floor(i / 2);
-    put(ball(head, 0.009, skinDark, 0, 0, 0, 1, 1, 0.5, 0), s * (0.045 + (k % 3) * 0.026), -0.02 - ((k * 7) % 3) * 0.015 + (k > 2 ? -0.02 : 0), 0.001);
-  }
   // facial hair
   const fh = L.facial, fc = L.facialColor ?? L.hair;
   if (fh === 'full') { ball(head, 0.17, fc, 0, -0.12, 0.05, hw, 0.85, 0.82, 1); for (const s of [-1, 1]) ball(head, 0.075, fc, s * 0.14 * hw, -0.02, 0.06, 0.7, 1.4, 0.8, 1); }
   if (fh === 'long') { ball(head, 0.17, fc, 0, -0.12, 0.05, hw, 0.85, 0.82, 1); box(head, 0.26 * hw, 0.5, 0.1, fc, 0, -0.62, 0.1, 0.06); cone(head, 0.13, 0.2, fc, 0, -0.72, 0.1).rotation.x = Math.PI; }
   if (fh === 'goatee') { const g = cone(head, 0.06, 0.16, fc, 0, -0.19, 0.12); g.rotation.x = Math.PI; }
-  if (fh === 'mustache' || fh === 'curly' || fh === 'full' || fh === 'long') for (const s of [-1, 1]) { const m = box(head, 0.06, 0.028, 0.035, fc, 0, 0, 0, 0.012); put(m, s * 0.034, -0.075, 0.016); m.rotation.z = s * -0.25; }
+  if (fh === 'mustache' || fh === 'curly' || fh === 'full' || fh === 'long') for (const s of [-1, 1]) { const m = ball(head, 0.035, fc, 0, 0, 0, 1.5, 0.6, 0.8, 2); put(m, s * 0.034, -0.078, 0.016); m.rotation.z = s * -0.25; }
   if (fh === 'curly') for (const s of [-1, 1]) ball(head, 0.022, fc, s * 0.078, -0.06, zAt(0.078, -0.06) + 0.01, 1, 1, 1, 1);
   if (fh === 'sideburns' || fh === 'mutton') for (const s of [-1, 1]) box(head, 0.045, fh === 'mutton' ? 0.14 : 0.1, 0.07, fc, s * 0.17 * hw, -0.06, 0.04, 0.02);
 
@@ -133,7 +86,7 @@ function buildHair(head, L) {
   const { hairStyle: st, hair: c, headW: hw, headwear } = L;
   const covered = HIDES_HAIR.has(headwear);
   const cap = () => { if (!covered) ball(head, 0.215, c, 0, 0.05, -0.02, hw, 0.85, 1.05); };
-  const fringe = (w = 0.3, h = 0.07) => { if (!covered) box(head, w * hw, h, 0.1, c, 0, 0.13, 0.14, 0.03); };
+  const fringe = (w = 0.3, h = 0.07) => { if (!covered) ball(head, 0.1, c, 0, 0.12, 0.1, 1.75 * hw * (w / 0.3), 0.5 * (h / 0.07), 1.15, 2); };
   if (st === 'short') { cap(); fringe(); if (headwear === 'hood') box(head, 0.3, 0.06, 0.08, c, 0, 0.1, 0.14, 0.03); }
   if (st === 'messy') { cap(); fringe(0.32, 0.09); for (let i = 0; i < 8; i++) { const a = i * 0.8, e = 0.5 + (i % 3) * 0.25, v = new THREE.Vector3(Math.sin(e) * Math.cos(a), Math.cos(e), Math.sin(e) * Math.sin(a)); if (v.z > 0.5 && v.y < 0.75) continue; const k = cone(head, 0.05, 0.13, c, v.x * 0.2, v.y * 0.2 + 0.04, v.z * 0.2); k.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), v); } }
   if (st === 'curly') { for (let i = 0; i < 18; i++) { const a = i * 2.4, e = 0.25 + (i % 6) * 0.2, v = new THREE.Vector3(Math.sin(e) * Math.cos(a), Math.cos(e), Math.sin(e) * Math.sin(a)); if (v.z > 0.45 && v.y < 0.8) continue; ball(head, 0.075, c, v.x * 0.2 * hw, v.y * 0.19 + 0.04, v.z * 0.2, 1, 1, 1, 1); } ball(head, 0.2, c, 0, 0.06, -0.06, hw, 0.8, 1, 1); }
