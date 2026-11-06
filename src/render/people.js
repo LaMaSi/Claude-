@@ -232,20 +232,21 @@ const GARMENT = { // [radius, y] profiles (top -> hem); lathe, scaled by build a
   bell: [[0, 1.03], [0.1, 1.0], [0.19, 0.93], [0.23, 0.78], [0.22, 0.6], [0.28, 0.38], [0.34, 0.18], [0.35, 0.12], [0, 0.1]],
   long: [[0, 1.03], [0.1, 1.0], [0.19, 0.93], [0.24, 0.78], [0.235, 0.6], [0.29, 0.4], [0.35, 0.2], [0.36, 0.12], [0, 0.1]],
 };
-const garmentGeo = new Map();
-function garment(parent, g, color, key, k = 1, zs = 0.82) {
-  let geo = garmentGeo.get(key);
-  if (!geo) { geo = new THREE.LatheGeometry(new THREE.SplineCurve(GARMENT[key].map(([r, y]) => new THREE.Vector2(r, y))).getPoints(34).reverse(), 32); garmentGeo.set(key, geo); }
-  const m = new THREE.Mesh(geo, smooth(color)); m.scale.set(g * k, 1, zs * k); m.castShadow = m.receiveShadow = true; parent.add(m); return m;
+// The garment is ONE smooth lathe shell. Belts, hems, aprons, vests, trims and cloaks are painted onto it with vertex
+// colours (no extra geometry, so nothing bulges and nothing can look hollow from above).
+const gMat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.9, metalness: 0 });
+const ss = THREE.MathUtils.smoothstep;
+const band = (v, a, b, e = 0.012) => ss(v, a - e, a + e) * (1 - ss(v, b - e, b + e)); // 1 between a and b
+function paintedGarment(parent, g, key, paint) {
+  const crv = new THREE.SplineCurve(GARMENT[key].map(([r, y]) => new THREE.Vector2(r, y))).getPoints(110).reverse();
+  const geo = new THREE.LatheGeometry(crv, 56), P = geo.attributes.position, C3 = new Float32Array(P.count * 3), c = new THREE.Color();
+  for (let i = 0; i < P.count; i++) {
+    const x = P.getX(i), y = P.getY(i), z = P.getZ(i), th = Math.atan2(x, z); // th = 0 at the front (+z), +/-pi at the back
+    paint(c, y, Math.abs(th)); C3[i * 3] = c.r; C3[i * 3 + 1] = c.g; C3[i * 3 + 2] = c.b;
+  }
+  geo.setAttribute('color', new THREE.BufferAttribute(C3, 3));
+  const m = new THREE.Mesh(geo, gMat); m.scale.set(g, 1, 0.82); m.castShadow = m.receiveShadow = true; parent.add(m); return m;
 }
-// a band of the garment surface (between two heights, a slice of the angle around it) lifted slightly off the cloth:
-// aprons, bibs, vests, front trims and cloaks that wrap the body instead of poking out of it
-function panel(parent, g, color, key, yBot, yTop, phiStart, phiLen, k = 1.035, zs = 0.82) {
-  const crv = new THREE.SplineCurve(GARMENT[key].map(([r, y]) => new THREE.Vector2(r, y))).getPoints(60).filter((q) => q.y >= yBot && q.y <= yTop).reverse();
-  const geo = new THREE.LatheGeometry(crv, Math.max(8, Math.round(phiLen * 8)), phiStart, phiLen);
-  const m = new THREE.Mesh(geo, mat(color, { flatShading: false, side: THREE.DoubleSide })); m.scale.set(g * k, 1, zs * k); m.castShadow = m.receiveShadow = true; parent.add(m); return m;
-}
-const FRONT = (half) => [-half, half * 2], BACK = (half) => [Math.PI - half, half * 2];
 function buildRay({ look, scale = 1, headScale = 1 }) {
   const L = { ...DEFAULT_LOOK, ...look };
   if (look.beard && !look.facial) L.facial = 'full';
@@ -254,29 +255,31 @@ function buildRay({ look, scale = 1, headScale = 1 }) {
   const parts = { legL: new THREE.Group(), legR: new THREE.Group() }; // legs are not drawn; kept so the animation layer still works
   parts.legL.position.set(-0.1, 0.5, 0); parts.legR.position.set(0.1, 0.5, 0); pivot.add(parts.legL, parts.legR);
   const body = new THREE.Group(); pivot.add(body); parts.body = body;
-  const hem = (c, r, y = 0.14) => ring(body, r * g, 0.028, c, y, 1, 0.82);
-  const belt = (c, y = 0.56) => ring(body, 0.225 * g, 0.032, c, y, 1, 0.82);
-  const collar = (c) => { const m = collarMesh(body, g * 1.2, c, 1); m.position.y = -0.02; return m; };
-  if (L.cloak != null) panel(body, g, L.cloak, outfit === 'robe' || outfit === 'noble' ? 'long' : outfit === 'gown' || outfit === 'dress' ? 'bell' : 'short', 0.14, 0.97, ...BACK(1.25), 1.07);
-  if (outfit === 'gown' || outfit === 'dress') {
-    garment(body, g, shirt, 'bell'); belt(outfit === 'gown' ? C.woolOchre : C.leather, 0.58); hem(C.cream, 0.352); collar(C.cream);
-    if (L.apron || outfit === 'dress') { panel(body, g, C.cream, 'bell', 0.15, 0.56, ...FRONT(0.55)); panel(body, g, C.cream, 'bell', 0.6, 0.86, ...FRONT(0.3)); }
-  } else if (outfit === 'robe') {
-    garment(body, g, shirt, 'long'); belt(C.cream, 0.58); hem(C.cream, 0.362); collar(tint(shirt, -0.2));
-    panel(body, g, C.cream, 'long', 0.14, 0.9, ...FRONT(0.1));
-  } else if (outfit === 'noble') {
-    garment(body, g, shirt, 'long'); hem(trim, 0.362); belt(C.gold, 0.56); collar(trim);
-    panel(body, g, trim, 'long', 0.14, 0.9, ...FRONT(0.16)); panel(body, g, tint(shirt, -0.25), 'long', 0.3, 0.8, ...BACK(0.9), 1.04);
-  } else if (outfit === 'smith') {
-    garment(body, g, shirt, 'short'); collar(shirt);
-    panel(body, g, C.leather, 'short', 0.14, 0.62, ...FRONT(0.6)); panel(body, g, C.leather, 'short', 0.64, 0.88, ...FRONT(0.34)); belt(C.leather, 0.54);
-  } else if (outfit === 'jerkin') {
-    garment(body, g, C.cream, 'short'); panel(body, g, trim, 'short', 0.42, 0.93, 0.28, Math.PI * 2 - 0.56, 1.04); collar(C.cream); belt(C.leather, 0.55);
-    for (let i = 0; i < 4; i++) ell(body, 0.1, 0.02, 0.03, C.leather, 0, 0.62 + i * 0.1, 0.205, 8);
-  } else { // tunic
-    garment(body, g, shirt, 'short'); belt(C.leather); hem(C.cream, 0.282); collar(C.cream);
-    box(body, 0.06, 0.07, 0.03, C.gold, 0, 0.53, 0.22, 0.01); ell(body, 0.1, 0.1, 0.06, C.leather, 0.23 * g, 0.5, 0.12, 12);
-  }
+  const K = { shirt: new THREE.Color(shirt), cream: new THREE.Color(C.cream), leather: new THREE.Color(C.leather), gold: new THREE.Color(C.gold),
+    trim: new THREE.Color(trim), ochre: new THREE.Color(C.woolOchre), cloak: new THREE.Color(L.cloak ?? 0) };
+  const mix = (c, k, w) => { if (w > 0.001) c.lerp(K[k], w); };
+  const key = outfit === 'gown' || outfit === 'dress' ? 'bell' : outfit === 'robe' || outfit === 'noble' ? 'long' : 'short';
+  paintedGarment(body, g, key, (c, y, a) => {
+    c.copy(outfit === 'jerkin' ? K.cream : K.shirt);
+    if (L.cloak != null) mix(c, 'cloak', band(y, 0.12, 0.99) * ss(a, 1.85, 2.25)); // cloak: a strip down the back
+    const hem = band(y, 0.1, 0.19), belt = (a0, a1) => band(y, a0, a1);
+    if (outfit === 'gown' || outfit === 'dress') {
+      if (L.apron || outfit === 'dress') { mix(c, 'cream', band(y, 0.19, 0.55) * (1 - ss(a, 0.5, 0.58))); mix(c, 'cream', band(y, 0.55, 0.88) * (1 - ss(a, 0.28, 0.34))); }
+      mix(c, 'cream', hem); mix(c, outfit === 'gown' ? 'ochre' : 'leather', belt(0.55, 0.61));
+    } else if (outfit === 'robe') {
+      mix(c, 'cream', band(y, 0.19, 0.93) * (1 - ss(a, 0.08, 0.12))); mix(c, 'cream', hem); mix(c, 'cream', belt(0.55, 0.6));
+    } else if (outfit === 'noble') {
+      mix(c, 'trim', band(y, 0.19, 0.93) * (1 - ss(a, 0.15, 0.19))); mix(c, 'trim', hem); mix(c, 'gold', belt(0.52, 0.58));
+    } else if (outfit === 'smith') {
+      mix(c, 'leather', band(y, 0.19, 0.62) * (1 - ss(a, 0.6, 0.68))); mix(c, 'leather', band(y, 0.62, 0.9) * (1 - ss(a, 0.34, 0.4))); mix(c, 'leather', belt(0.5, 0.56));
+    } else if (outfit === 'jerkin') {
+      mix(c, 'trim', band(y, 0.42, 0.94) * ss(a, 0.26, 0.32)); mix(c, 'leather', belt(0.53, 0.58));
+    } else { // tunic
+      mix(c, 'cream', hem); mix(c, 'leather', belt(0.52, 0.58)); mix(c, 'gold', band(y, 0.52, 0.58) * (1 - ss(a, 0.1, 0.15)));
+    }
+  });
+  const collarC = outfit === 'robe' ? tint(shirt, -0.2) : outfit === 'noble' ? trim : outfit === 'smith' ? shirt : C.cream;
+  { const m = collarMesh(body, g * 1.2, collarC, 1); m.position.y = -0.02; }
 
   for (const [name, sx] of [['armL', -1], ['armR', 1]]) { // floating sphere hands (the arm group is just the swing pivot)
     const arm = new THREE.Group(); arm.position.set(sx * 0.3 * g, 0.82, 0); arm.rotation.z = sx * 0.08; body.add(arm);
