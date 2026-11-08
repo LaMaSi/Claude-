@@ -7,6 +7,8 @@ const CAM_OFFSET := Vector3(20, 17.5, 19.2)
 
 var sim: Sim
 var world: World
+var view: CharactersView
+var baker: FaceBaker
 var daynight: DayNight
 var camera: Camera3D
 var hour := 21.5
@@ -31,6 +33,19 @@ func _ready() -> void:
 	add_child(world)
 	world.build(GameData.house)
 
+	baker = FaceBaker.new()
+	add_child(baker)
+	Face.baker = baker
+	view = CharactersView.new()
+	add_child(view)
+	view.setup(sim)
+	# pre-bake the other painted expressions so mood changes never flash a blank face
+	for c in sim.chars:
+		var look := Face.merged_look(c.look)
+		for ex in ["blink", "happy", "content", "sad", "tired", "sleep"]:
+			Face.head_material(look, ex)
+	sim.select("sam")
+
 	camera = Camera3D.new()
 	camera.projection = Camera3D.PROJECTION_ORTHOGONAL
 	camera.keep_aspect = Camera3D.KEEP_HEIGHT
@@ -48,17 +63,29 @@ func _fit_camera() -> void:
 	var need_w := 17.0 if vs.x < vs.y else 22.0
 	var need_h := 15.5
 	camera.size = maxf(need_h, need_w * vs.y / vs.x)
+	if _args.has("zoom"):
+		camera.size /= float(_args.zoom)
 
 
 func _process(delta: float) -> void:
 	_frame += 1
 	var t := Time.get_ticks_msec() / 1000.0
+	if _args.has("focus"):   # dev: close-up on a character
+		var fc: Variant = sim.get_char(_args.focus)
+		if fc != null:
+			var tgt := Vector3(fc.x, 0.8 * fc.scale, fc.z) + Vector3(float(_args.get("dx", 0)), 0, 0)
+			camera.position = tgt + CAM_OFFSET.normalized() * 30.0
+			camera.look_at(tgt, Vector3.UP)
 	if auto_time:
 		hour = fmod(hour + delta * 0.5, 24.0)
 	sim.hour = hour
 	sim.update(delta * float(_args.get("speed", 1)))
 	daynight.update(hour, world, t)
-	if _args.has("shot") and _frame == int(_args.get("frames", 12)):
+	view.update(delta, t, sim.selected_id)
+	if _args.has("yaw"):
+		for id in view.views:
+			view.views[id].root.rotation.y = float(_args.yaw)
+	if _args.has("shot") and _frame >= int(_args.get("frames", 12)) and baker.pending() == 0 and _frame > 20:
 		var img := get_viewport().get_texture().get_image()
 		img.save_png(_args.shot)
 		print("saved ", _args.shot, " ", img.get_size())
