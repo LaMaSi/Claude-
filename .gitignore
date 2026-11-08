@@ -1,2 +1,8 @@
 node_modules
 dist
+
+# Godot
+godot/.godot/
+godot/android/
+*.apk
+*.aab
