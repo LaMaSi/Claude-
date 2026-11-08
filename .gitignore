@@ -6,3 +6,4 @@ godot/.godot/
 godot/android/
 *.apk
 *.aab
+godot/build/
