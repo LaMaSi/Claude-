@@ -31,6 +31,9 @@ var _ready_ui := false
 var _ema_ms := 16.0
 var _slow_for := 0.0
 var _quality := 0
+var _detail := 1          # 0 low, 1 medium (pixel budget), 2 high (native)
+var _show_perf := false
+var _perf_acc := 0.0
 var _perf_us := {"sim": 0, "daynight": 0, "view": 0, "hud_update": 0}
 
 
@@ -112,16 +115,48 @@ func _boot_ui() -> void:
 	hud.hour_changed.connect(func(h: float): hour = h)
 	hud.auto_toggled.connect(func(on: bool): auto_time = on)
 	hud.pixel_changed.connect(_set_pixel)
+	hud.perf_changed.connect(func(on: bool): _show_perf = on; _save_view("perf", on))
+	hud.detail_changed.connect(func(l: int): _apply_detail(l); _save_view("detail", l))
 	var cfg := ConfigFile.new()
 	if cfg.load(SETTINGS) == OK:
+		_show_perf = cfg.get_value("view", "perf", false)
+		hud.set_perf_ui(_show_perf)
+		_detail = int(cfg.get_value("view", "detail", 1))
 		_set_pixel(cfg.get_value("view", "pixel", false), float(cfg.get_value("view", "pixel_cell", 3)))
 		hud.set_pixel_ui(cfg.get_value("view", "pixel", false), int(cfg.get_value("view", "pixel_cell", 3)))
 	if _args.has("open"):
 		hud.set_open(true)
 		hud.set_tab(_args.open)
 	hud.set_hour_silently(hour)
+	hud.set_detail_ui(_detail)
+	_apply_detail(_detail)
 	_ready_ui = true
 	_fit_camera()
+
+
+func _save_view(key: String, value: Variant) -> void:
+	var cfg := ConfigFile.new()
+	cfg.load(SETTINGS)
+	cfg.set_value("view", key, value)
+	cfg.save(SETTINGS)
+
+
+## How many 3D pixels we draw. The web build capped devicePixelRatio at 2 (~1.3M px on a phone); drawing every
+## native pixel of a tall phone (~2.6M) doubles the fill cost. Medium targets ~1.5M px; UI is always native-sharp.
+func _apply_detail(level: int) -> void:
+	_detail = level
+	var win := Vector2(DisplayServer.window_get_size())
+	var vp := get_viewport()
+	vp.scaling_3d_mode = Viewport.SCALING_3D_MODE_BILINEAR
+	var s := 1.0
+	match level:
+		0: s = clampf(sqrt(0.9e6 / maxf(win.x * win.y, 1.0)), 0.5, 1.0)
+		1: s = clampf(sqrt(1.5e6 / maxf(win.x * win.y, 1.0)), 0.5, 1.0)
+	if _args.has("scale"):
+		s = float(_args.scale)
+	vp.scaling_3d_scale = s
+	daynight.sun.shadow_blur = 0.0 if level == 0 else 1.6
+	_quality = 0   # re-arm the adaptive fallback relative to the chosen level
 
 
 func _set_pixel(on: bool, cell: float) -> void:
@@ -244,6 +279,13 @@ func _process(delta: float) -> void:
 		var mm := marker.material_override as StandardMaterial3D
 		mm.albedo_color.a = (1.0 - marker_t) * 0.9
 		marker.scale = Vector3.ONE * (1.0 + marker_t * 1.2)
+	if _show_perf and hud != null:
+		_perf_acc += delta
+		if _perf_acc > 0.5:
+			_perf_acc = 0.0
+			hud.set_perf_text("%d fps  %.1f ms\n%s  3D x%.2f\ndraw %d  tris %dk" % [Engine.get_frames_per_second(), delta * 1000.0,
+				RenderingServer.get_current_rendering_method(), get_viewport().scaling_3d_scale,
+				Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME), Performance.get_monitor(Performance.RENDER_TOTAL_PRIMITIVES_IN_FRAME) / 1000.0])
 	if hud != null:
 		var t4 := Time.get_ticks_usec()
 		hud.update(delta, hour)
@@ -317,8 +359,8 @@ func _adapt_quality(delta: float) -> void:
 		vp.scaling_3d_mode = Viewport.SCALING_3D_MODE_BILINEAR
 		daynight.sun.shadow_blur = 0.0
 		if _quality == 1:
-			vp.scaling_3d_scale = 0.8
+			vp.scaling_3d_scale = maxf(0.5, vp.scaling_3d_scale * 0.85)
 		else:
-			vp.scaling_3d_scale = 0.66
+			vp.scaling_3d_scale = maxf(0.5, vp.scaling_3d_scale * 0.8)
 			RenderingServer.directional_shadow_atlas_set_size(1024, true)
 		print("quality -> level ", _quality)

@@ -7,6 +7,8 @@ signal portrait_pressed(id: String)
 signal hour_changed(hour: float)
 signal auto_toggled(on: bool)
 signal pixel_changed(enabled: bool, cell: float)
+signal perf_changed(show: bool)
+signal detail_changed(level: int)
 
 const S := 2.7   # one CSS pixel of the web UI in viewport pixels (the 1080-wide viewport ~ a 390px-wide phone)
 const GOLD := Color("c9a24c")
@@ -63,6 +65,9 @@ var _safe_bottom := 0.0
 var _layout_key := Vector4.ZERO
 var _px_sw: CheckButton
 var _px_cell := 3
+var _perf_sw: CheckButton
+var perf_lbl: Label
+var _detail_btns: Array = []
 
 
 # ---- small widgets ----------------------------------------------------------------------------------------------
@@ -312,6 +317,10 @@ void fragment() {
 		safe_top = top_in if top_in <= 160.0 else 0.0
 		safe_bottom = bot_in if bot_in <= 160.0 else 0.0
 
+	perf_lbl = _lbl("", 11, Color("c8ffc8"))
+	perf_lbl.position = Vector2(10 * S, 8 * S + safe_top)
+	perf_lbl.visible = false
+	root.add_child(perf_lbl)
 	_build_top(safe_top)
 	_build_dock(safe_bottom)
 	set_open(false)
@@ -380,6 +389,35 @@ func _build_top(safe_top: float) -> void:
 			pixel_changed.emit(_px_sw.button_pressed, float(cell)))
 		r2.add_child(ob)
 	ov.add_child(r2)
+	var r3 := _hbox(10)
+	r3.add_child(_lbl("Show performance", 14, TEXT))
+	r3.add_child(_spacer())
+	_perf_sw = CheckButton.new()
+	_perf_sw.focus_mode = Control.FOCUS_NONE
+	_perf_sw.toggled.connect(func(on: bool):
+		perf_lbl.visible = on
+		perf_changed.emit(on))
+	r3.add_child(_perf_sw)
+	ov.add_child(r3)
+	var r4 := _hbox(6)
+	r4.add_child(_lbl("Detail", 14, TEXT))
+	r4.add_child(_spacer())
+	var di := 0
+	for dname in ["Low", "Medium", "High"]:
+		var db := Button.new()
+		db.text = dname
+		db.toggle_mode = true
+		db.focus_mode = Control.FOCUS_NONE
+		db.add_theme_font_override("font", body_font)
+		db.add_theme_font_size_override("font_size", int(12.5 * S))
+		var lvl := di
+		db.pressed.connect(func():
+			detail_changed.emit(lvl)
+			set_detail_ui(lvl))
+		r4.add_child(db)
+		_detail_btns.append(db)
+		di += 1
+	ov.add_child(r4)
 	var cred := _wrap("Icons: game-icons.net by Lorc, Delapouite & contributors (CC BY 3.0)", 10.5, Color("a99872"))
 	ov.add_child(cred)
 
@@ -1044,3 +1082,17 @@ func set_pixel_ui(enabled: bool, cell: int) -> void:
 ## Height (viewport px) of what the dock currently occupies at the bottom of the screen.
 func dock_height() -> float:
 	return dock_box.get_combined_minimum_size().y
+
+
+func set_detail_ui(level: int) -> void:
+	for i in _detail_btns.size():
+		(_detail_btns[i] as Button).set_pressed_no_signal(i == level)
+
+
+func set_perf_ui(on: bool) -> void:
+	_perf_sw.set_pressed_no_signal(on)
+	perf_lbl.visible = on
+
+
+func set_perf_text(t: String) -> void:
+	perf_lbl.text = t
