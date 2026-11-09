@@ -28,7 +28,7 @@ static func _sphere(seg: int) -> SphereMesh:
 
 
 ## Centre-based soft ellipsoid of the given overall size.
-static func ell(parent: Node3D, w: float, h: float, d: float, color: int, x: float, y: float, z: float, seg: int = 20) -> MeshInstance3D:
+static func ell(parent: Node3D, w: float, h: float, d: float, color: int, x: float, y: float, z: float, seg: int = 14) -> MeshInstance3D:
 	var m := MeshInstance3D.new()
 	m.mesh = _sphere(seg)
 	m.material_override = smooth_mat(color)
@@ -39,7 +39,7 @@ static func ell(parent: Node3D, w: float, h: float, d: float, color: int, x: flo
 
 
 ## Sphere of radius r, optionally squashed (sx, sy, sz).
-static func ball(parent: Node3D, r: float, color: int, x: float, y: float, z: float, sx: float = 1.0, sy: float = 1.0, sz: float = 1.0, seg: int = 16) -> MeshInstance3D:
+static func ball(parent: Node3D, r: float, color: int, x: float, y: float, z: float, sx: float = 1.0, sy: float = 1.0, sz: float = 1.0, seg: int = 12) -> MeshInstance3D:
 	return ell(parent, 2.0 * r * sx, 2.0 * r * sy, 2.0 * r * sz, color, x, y, z, seg)
 
 

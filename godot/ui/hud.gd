@@ -60,6 +60,7 @@ var time_slider: HSlider
 var opt_pop: PanelContainer
 var dock_box: VBoxContainer
 var _safe_bottom := 0.0
+var _layout_key := Vector4.ZERO
 var _px_sw: CheckButton
 var _px_cell := 3
 
@@ -657,6 +658,10 @@ func _layout() -> void:
 	var x := (root.size.x - w) / 2.0
 	var y := root.size.y - 10.0 * S - _safe_bottom - ms.y
 	# explicit offsets from the top-left anchor (assigning position/size lets the min-size clamp shift the rect)
+	var key := Vector4(x, y, w, ms.y)
+	if key == _layout_key:
+		return   # re-assigning identical offsets still forces a relayout of the whole panel tree
+	_layout_key = key
 	dock_box.offset_left = x
 	dock_box.offset_top = y
 	dock_box.offset_right = x + w

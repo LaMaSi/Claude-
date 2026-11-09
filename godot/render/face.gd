@@ -74,8 +74,8 @@ static func head_mesh(L: Dictionary) -> ArrayMesh:
 	if _geo_cache.has(key):
 		return _geo_cache[key]
 	var R := HEAD_R
-	var WS := 44
-	var HS := 32
+	var WS := 32
+	var HS := 24
 	var pos := PackedVector3Array()
 	var nrm := PackedVector3Array()
 	var uvs := PackedVector2Array()

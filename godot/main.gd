@@ -28,6 +28,10 @@ var _args := {}
 var _frame := 0
 var _shift := 0.0
 var _ready_ui := false
+var _ema_ms := 16.0
+var _slow_for := 0.0
+var _quality := 0
+var _perf_us := {"sim": 0, "daynight": 0, "view": 0, "hud_update": 0}
 
 
 func _ready() -> void:
@@ -206,6 +210,7 @@ func _process(delta: float) -> void:
 			camera.position = tgt + CAM_OFFSET.normalized() * 30.0
 			camera.look_at(tgt, Vector3.UP)
 			camera.size = 17.0 / float(_args.get("zoom", 9))
+			camera.v_offset = 0.0
 	elif _ready_ui:
 		rig.update(delta)
 		var dock_h := hud.dock_height() if hud != null else 0.0
@@ -219,10 +224,18 @@ func _process(delta: float) -> void:
 		hour = nh
 		if hud != null:
 			hud.set_hour_silently(hour)
+	_adapt_quality(delta)
 	sim.hour = hour
+	var t0 := Time.get_ticks_usec()
 	sim.update(delta * speed)
+	var t1 := Time.get_ticks_usec()
 	daynight.update(hour, world, t)
+	var t2 := Time.get_ticks_usec()
 	view.update(delta, t, sim.selected_id)
+	var t3 := Time.get_ticks_usec()
+	_perf_us["sim"] += t1 - t0
+	_perf_us["daynight"] += t2 - t1
+	_perf_us["view"] += t3 - t2
 	if _args.has("yaw"):
 		for id in view.views:
 			view.views[id].root.rotation.y = float(_args.yaw)
@@ -232,7 +245,22 @@ func _process(delta: float) -> void:
 		mm.albedo_color.a = (1.0 - marker_t) * 0.9
 		marker.scale = Vector3.ONE * (1.0 + marker_t * 1.2)
 	if hud != null:
+		var t4 := Time.get_ticks_usec()
 		hud.update(delta, hour)
+		_perf_us["hud_update"] += Time.get_ticks_usec() - t4
+	if _args.has("perf") and _frame == 100:
+		print("TRIS world=%d characters=%d" % [_tris(world), _tris(view)])
+		for k in _perf_us:
+			_perf_us[k] = 0
+	if _args.has("perf") and _frame == 400:
+		var n := 300.0
+		print("CPU us/frame: sim=%.0f daynight=%.0f chars_view=%.0f hud_update=%.0f" % [_perf_us.sim / n, _perf_us.daynight / n, _perf_us.view / n, _perf_us.hud_update / n])
+	if _args.has("perf") and _frame % 60 == 0 and _frame > 60:
+		print("PERF frame %d: draw_calls=%d prims=%d objects=%d nodes=%d script_ms=%.2f process_ms=%.2f vram_mb=%.0f" % [_frame,
+			Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME), Performance.get_monitor(Performance.RENDER_TOTAL_PRIMITIVES_IN_FRAME),
+			Performance.get_monitor(Performance.RENDER_TOTAL_OBJECTS_IN_FRAME), Performance.get_monitor(Performance.OBJECT_NODE_COUNT),
+			Performance.get_monitor(Performance.TIME_PROCESS) * 1000.0, Performance.get_monitor(Performance.TIME_PROCESS) * 1000.0,
+			Performance.get_monitor(Performance.RENDER_VIDEO_MEM_USED) / 1048576.0])
 	if _args.has("taptest") and _ready_ui and _frame == 40:
 		var sam: Dictionary = sim.get_char("sam")
 		var log := []
@@ -258,3 +286,39 @@ func _process(delta: float) -> void:
 			print("root ", hud.root.position, hud.root.size, " dock_box ", hud.dock_box.position, hud.dock_box.size, " anchors ", hud.dock_box.anchor_top, hud.dock_box.anchor_bottom, " offsets ", hud.dock_box.offset_top, hud.dock_box.offset_bottom)
 			print("panel ", hud.panel.position, hud.panel.size, " pbody ", hud.pbody.size, " min ", hud.dock_box.get_combined_minimum_size())
 		get_tree().quit()
+
+
+func _tris(n: Node) -> int:
+	var total := 0
+	if n is MeshInstance3D and (n as MeshInstance3D).mesh != null:
+		var m := (n as MeshInstance3D).mesh
+		if m is ArrayMesh:
+			for i in m.get_surface_count():
+				var il := (m as ArrayMesh).surface_get_array_index_len(i)
+				total += (il if il > 0 else (m as ArrayMesh).surface_get_array_len(i)) / 3
+		else:
+			total += m.get_faces().size() / 3
+	for c in n.get_children():
+		total += _tris(c)
+	return total
+
+
+## Same idea as the web build: if frames stay slow for a few seconds, trade quality for speed (never the other way).
+## level 1: render at 80% and drop shadow softening; level 2: 66%, small shadow map.
+func _adapt_quality(delta: float) -> void:
+	if _frame < 120 or _args.has("shot"):
+		return
+	_ema_ms += (minf(delta, 0.1) * 1000.0 - _ema_ms) * 0.05
+	_slow_for = _slow_for + delta if _ema_ms > 26.0 else 0.0
+	if _slow_for > 3.0 and _quality < 2:
+		_quality += 1
+		_slow_for = 0.0
+		var vp := get_viewport()
+		vp.scaling_3d_mode = Viewport.SCALING_3D_MODE_BILINEAR
+		daynight.sun.shadow_blur = 0.0
+		if _quality == 1:
+			vp.scaling_3d_scale = 0.8
+		else:
+			vp.scaling_3d_scale = 0.66
+			RenderingServer.directional_shadow_atlas_set_size(1024, true)
+		print("quality -> level ", _quality)

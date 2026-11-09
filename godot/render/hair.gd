@@ -61,8 +61,8 @@ static func _grv(fn: Variant, az: float, u: float) -> float:
 static func shell(o: Dictionary) -> ArrayMesh:
 	var rx: float = o.rx; var ry: float = o.ry; var rz: float = o.rz
 	var cy: float = o.get("cy", 0.0)
-	var rows: int = o.get("rows", 40)
-	var cols: int = o.get("cols", 84)
+	var rows: int = o.get("rows", 24)
+	var cols: int = o.get("cols", 60)
 	var flare: float = o.get("flare", 0.0)
 	var curl: float = o.get("curl", 0.0)
 	var y_end: Callable = o.yEnd

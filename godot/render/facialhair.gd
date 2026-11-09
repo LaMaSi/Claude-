@@ -16,8 +16,8 @@ static func _beard_shell(o: Dictionary) -> ArrayMesh:
 	var groove_amp: float = o.get("grooveAmp", 0.005)
 	var s_hang: float = o.get("sHang", 0.6)
 	var tip_taper: float = o.get("tipTaper", 0.5)
-	var rows: int = o.get("rows", 30)
-	var cols: int = o.get("cols", 64)
+	var rows: int = o.get("rows", 20)
+	var cols: int = o.get("cols", 44)
 	var base := Geo.hex_to_lin(o.color)
 	var cy := 0.0
 	var s_min := sqrt(1.0 - 0.97 * 0.97)

@@ -88,6 +88,7 @@ func update(hour: float, world: World, time: float) -> float:
 	var r: Dictionary = world.reg
 	for l in r.lamp_lights:
 		l.light_energy = night * 11.0 * K_LAMP
+		l.visible = night > 0.02   # an unlit omni still costs per-pixel work on the Mobile renderer
 	for s in r.lamp_shades:
 		(s.material_override as StandardMaterial3D).emission_energy_multiplier = night * 1.5
 	for g in r.window_glass:

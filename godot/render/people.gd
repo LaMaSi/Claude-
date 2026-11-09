@@ -95,9 +95,9 @@ static func _garment_mesh(L: Dictionary, key: String, K: Dictionary) -> ArrayMes
 	var pts: Array = []
 	for p in GARMENT[key]:
 		pts.append(Vector2(p[0], p[1]))
-	var crv := Geo.spline2(pts, 120)
+	var crv := Geo.spline2(pts, 64)
 	crv.reverse()   # bottom -> top for outward faces
-	var mesh := Geo.lathe(crv, 112, func(_j: int, y: float, th: float) -> Color: return _paint(L, K, y, absf(th), th))
+	var mesh := Geo.lathe(crv, 56, func(_j: int, y: float, th: float) -> Color: return _paint(L, K, y, absf(th), th))
 	_garment_cache[ck] = mesh
 	return mesh
 
@@ -170,7 +170,7 @@ static func build_ray(cfg: Dictionary) -> Dictionary:
 		arm.position = Vector3(sx * 0.3 * g, 0.82, 0)
 		arm.rotation.z = sx * 0.08
 		body.add_child(arm)
-		Prim.ball(arm, 0.08, skin, sx * 0.07, -0.34, 0.03, 1.0, 1.0, 1.0, 20)
+		Prim.ball(arm, 0.08, skin, sx * 0.07, -0.34, 0.03, 1.0, 1.0, 1.0, 12)
 		parts[pair[0]] = arm
 	var hs := head_scale * 1.1
 	var hy := 1.14 + (Face.head_bottom(L) - 0.2) * 0.8
