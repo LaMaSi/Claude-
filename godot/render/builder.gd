@@ -13,6 +13,8 @@ var _stack: Array[Transform3D] = []
 var shadow := true   # pieces added while false go to a no-shadow surface
 var _surf: Dictionary = {}  # signature -> {verts, cols, opts, shadow}
 var _ico_cache: Dictionary = {}
+static var capture := false           # debug: record every box so tests can look for coplanar faces
+static var captured: Array = []
 ## Where dynamic nodes (flames, lights, glass) are added, and where models register them for the day/night code.
 var dyn_parent: Node3D
 var reg := {"lamp_shades": [], "lamp_lights": [], "flames": [], "fire_lights": [], "window_glass": []}
@@ -75,6 +77,8 @@ func box(w: float, h: float, d: float, color: int, x: float, y: float, z: float,
 	var b := _bucket(opts)
 	var col := GameData.col(color)
 	var hx := w / 2.0; var hy := h / 2.0; var hz := d / 2.0
+	if capture:
+		captured.append({"t": t, "half": Vector3(hx, hy, hz), "opts": opts})
 	var v: Array[Vector3] = []
 	for sx in [-1.0, 1.0]:
 		for sy in [-1.0, 1.0]:

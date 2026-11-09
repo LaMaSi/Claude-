@@ -47,11 +47,11 @@ static func bed(b: Builder) -> void:
 	b.box(1.7, 0.3, 2.1, Pal.OAK_DARK, 0, 0, 0)
 	for sx in [-1.0, 1.0]:
 		for sz in [-1.0, 1.0]:
-			b.box(0.1, 0.5, 0.1, Pal.OAK, sx * 0.8, 0, sz * 1.0)
+			b.box(0.1, 0.46, 0.1, Pal.OAK, sx * 0.82, 0, sz * 1.02)   # corner posts stand proud of the frame
 	b.box(1.6, 0.2, 2.0, Pal.LINEN, 0, 0.3, 0.02)            # straw mattress (top = 0.5)
 	b.box(1.62, 0.1, 1.15, Pal.WOOL, 0, 0.44, 0.42)           # wool blanket
-	b.box(1.64, 0.105, 0.14, Pal.WOOL_OCHRE, 0, 0.44, 0.06)   # stripes
-	b.box(1.64, 0.105, 0.08, Pal.WOOL_OCHRE, 0, 0.44, 0.9)
+	b.box(1.64, 0.115, 0.14, Pal.WOOL_OCHRE, 0, 0.44, 0.06)   # stripes
+	b.box(1.64, 0.115, 0.08, Pal.WOOL_OCHRE, 0, 0.44, 0.9)
 	b.box(0.64, 0.13, 0.4, Pal.CREAM, -0.4, 0.5, -0.72)       # pillows
 	b.box(0.64, 0.13, 0.4, Pal.CREAM, 0.4, 0.5, -0.72)
 	b.box(1.8, 1.0, 0.13, Pal.OAK, 0, 0, -1.07)               # headboard
@@ -79,7 +79,7 @@ static func hearth(b: Builder) -> void:
 	b.box(1.7, 0.2, 0.75, Pal.STONE_DARK, 0, 0, 0)
 	for sx in [-1.0, 1.0]:
 		b.box(0.38, 1.15, 0.65, Pal.STONE, sx * 0.65, 0.2, -0.02)
-	b.box(1.7, 0.32, 0.65, Pal.STONE_LIGHT, 0, 1.2, -0.02)     # mantel
+	b.box(1.7, 0.32, 0.69, Pal.STONE_LIGHT, 0, 1.2, 0.0)       # mantel (projects past the jambs)
 	b.box(0.92, 0.95, 0.08, 0x2a2420, 0, 0.2, -0.3)            # sooty back
 	b.box(1.5, 1.0, 0.5, Pal.STONE, 0, 1.52, -0.1)             # chimney breast
 	b.box(0.95, 1.7, 0.45, Pal.STONE_DARK, 0, 2.5, -0.12)      # stack (rises above the wall)
@@ -104,7 +104,7 @@ static func tub(b: Builder) -> void:
 	b.cyl(0.45, 0.45, 0.01, Pal.WATER, 0, 0.55, 0, 14, {"opacity": 0.8, "roughness": 0.2, "emissive": 0x335566, "emissive_intensity": 0.2})
 	# folding screen behind the tub (away from the camera) with a towel over it
 	b.box(1.4, 1.5, 0.05, Pal.OAK_DARK, 0.0, 0, -0.66); b.box(1.26, 1.2, 0.03, Pal.LINEN, 0.0, 0.15, -0.63)
-	b.box(0.2, 0.5, 0.09, Pal.WOOL, 0.3, 0.95, -0.66)
+	b.box(0.2, 0.5, 0.11, Pal.WOOL, 0.3, 0.95, -0.66)
 	b.cyl(0.12, 0.1, 0.22, Pal.OAK_LIGHT, -0.6, 0, 0.45, 8)    # bucket
 
 
@@ -115,7 +115,7 @@ static func washstand(b: Builder) -> void:
 			b.box(0.06, 0.8, 0.06, Pal.OAK_DARK, sx * 0.29, 0, sz * 0.19)
 	b.box(0.6, 0.04, 0.4, Pal.OAK_DARK, 0, 0.3, 0)
 	b.cyl(0.2, 0.12, 0.1, Pal.CREAM, -0.05, 0.86, 0, 14)
-	b.cyl(0.17, 0.17, 0.01, Pal.WATER, -0.05, 0.95, 0, 14, {"opacity": 0.8})
+	b.cyl(0.17, 0.17, 0.01, Pal.WATER, -0.05, 0.96, 0, 14, {"opacity": 0.8})
 	b.cyl(0.08, 0.1, 0.22, Pal.CLAY, 0.24, 0.86, 0.05, 9)      # jug
 	b.box(0.04, 0.12, 0.04, Pal.CLAY, 0.33, 0.95, 0.05)
 	b.box(0.5, 0.45, 0.04, Pal.IRON_LIGHT, 0, 0.96, -0.26, 0.0, Vector3.ZERO, {"metalness": 0.3, "roughness": 0.4})  # plate mirror
@@ -123,9 +123,9 @@ static func washstand(b: Builder) -> void:
 
 static func settle(b: Builder) -> void:
 	b.box(2.0, 0.42, 0.7, Pal.OAK, 0, 0, 0)
-	b.box(2.05, 0.95, 0.1, Pal.OAK_LIGHT, 0, 0.1, -0.3)
+	b.box(2.09, 0.95, 0.1, Pal.OAK_LIGHT, 0, 0.1, -0.3)
 	for sx in [-1.0, 1.0]:
-		b.box(0.1, 0.72, 0.7, Pal.OAK_DARK, sx * 0.97, 0, 0)
+		b.box(0.1, 0.72, 0.72, Pal.OAK_DARK, sx * 0.97, 0, 0)
 	b.box(0.9, 0.09, 0.55, Pal.WOOL, -0.48, 0.42, 0.02); b.box(0.9, 0.09, 0.55, Pal.WOOL, 0.48, 0.42, 0.02)
 	b.box(0.4, 0.34, 0.1, Pal.WOOL_BLUE, 0.62, 0.52, -0.2, 0.0, Vector3(-0.25, 0, 0))
 	b.box(0.4, 0.34, 0.1, Pal.WOOL_OCHRE, -0.62, 0.52, -0.2, 0.0, Vector3(-0.25, 0, 0))
@@ -150,7 +150,7 @@ static func table(b: Builder) -> void:
 	for sx in [-1.0, 1.0]:
 		b.box(0.09, 0.7, 0.7, Pal.OAK_DARK, sx * 0.55, 0, 0)
 	b.box(1.0, 0.07, 0.07, Pal.OAK_DARK, 0, 0.2, 0)
-	b.box(1.52, 0.012, 0.012, Pal.OAK_DARK, 0, 0.77, 0.1)
+	b.box(1.52, 0.012, 0.012, Pal.OAK_DARK, 0, 0.778, 0.1)
 	b.cyl(0.17, 0.12, 0.05, Pal.OAK, -0.4, 0.78, 0.1, 10)      # bowl
 	b.ball(0.13, 0xd9a86a, 0.05, 0.84, 0.15, 1, 0.65)          # bread
 	b.cyl(0.07, 0.09, 0.2, Pal.CLAY, 0.45, 0.78, -0.1, 9)      # jug
@@ -192,7 +192,7 @@ static func bookshelf(b: Builder) -> void:
 	b.box(1.1, 1.9, 0.35, Pal.OAK_DARK, 0, 0, 0)
 	var cols := [Pal.WOOL, Pal.WOOL_BLUE, Pal.WOOL_GREEN, Pal.WOOL_OCHRE, Pal.LEATHER]
 	for s in 4:
-		b.box(1.02, 0.04, 0.33, Pal.OAK, 0, 0.35 + s * 0.45, 0.01)
+		b.box(1.02, 0.04, 0.31, Pal.OAK, 0, 0.35 + s * 0.45, 0.0)
 		for i in 6:
 			var h := 0.22 + ((i * 7 + s * 3) % 5) * 0.03
 			b.box(0.07, h, 0.22, cols[(i + s) % cols.size()], -0.4 + i * 0.12, 0.39 + s * 0.45, 0.02)
@@ -211,9 +211,9 @@ static func rug(b: Builder) -> void:
 
 static func banner(b: Builder) -> void:
 	b.box(0.95, 0.05, 0.06, Pal.OAK_DARK, 0, 1.1, 0)
-	b.box(0.78, 1.0, 0.02, Pal.WOOL, 0, 0.12, 0.02)
-	b.box(0.55, 0.55, 0.02, Pal.WOOL, 0, 0.17 - 0.275, 0.02, 0.0, Vector3(0, 0, PI / 4))
-	b.box(0.26, 0.26, 0.025, Pal.GOLD, 0, 0.5, 0.035, 0.0, Vector3(0, 0, PI / 4))
+	b.box(0.78, 1.0, 0.02, Pal.WOOL, 0, 0.12, 0.03)
+	b.box(0.55, 0.55, 0.02, Pal.WOOL, 0, 0.17 - 0.275, 0.045, 0.0, Vector3(0, 0, PI / 4))
+	b.box(0.26, 0.26, 0.025, Pal.GOLD, 0, 0.5, 0.06, 0.0, Vector3(0, 0, PI / 4))
 	for sx in [-1.0, 1.0]:
 		b.ball(0.04, Pal.GOLD, sx * 0.5, 1.13, 0, 0)
 
@@ -223,7 +223,7 @@ static func chest(b: Builder) -> void:
 	b.cyl(0.275, 0.275, 1.0, Pal.OAK_LIGHT, 0, -0.1, 0, 10, {}, Vector3(0, 0, PI / 2), 0.0, PI)  # arched lid
 	for x in [-0.35, 0.35]:
 		b.box(0.07, 0.42, 0.57, Pal.IRON, x, 0, 0)
-	b.box(0.1, 0.12, 0.04, Pal.GOLD, 0, 0.28, 0.29)
+	b.box(0.1, 0.12, 0.04, Pal.GOLD, 0, 0.26, 0.29)
 
 
 static func barrel(b: Builder) -> void:
