@@ -15,6 +15,7 @@ var time := 0.0
 var flags: Dictionary = {}
 var date: Dictionary
 var chars: Array = []
+var _next_id := 0
 
 
 static func ang_diff(a: float, b: float) -> float:
@@ -35,16 +36,16 @@ static func to_world(it: Dictionary, lx: float, lz: float) -> Vector2:
 	return Vector2(it.x + lx * c + lz * s, it.z - lx * s + lz * c)
 
 
-func _init(p_house: Dictionary, family: Array) -> void:
+func _init(p_house: Dictionary, family: Array, layout_items: Variant = null) -> void:
 	house = p_house
 	date = GameData.start_date.duplicate()
-	var idx := 0
-	for it in house.items:
+	var src: Array = layout_items if layout_items != null else house.items
+	for it in src:
 		var d: Dictionary = it.duplicate()
-		d.index = idx
+		d.index = _next_id
+		_next_id += 1
 		items.append(d)
-		idx += 1
-	nav = NavGrid.build(house, GameData.furniture)
+	nav = NavGrid.build(house, GameData.furniture, items)
 	for f in family:
 		var p: Vector2 = nav.nearest_walkable(f.start.x, f.start.z)
 		var needs := {}
@@ -67,6 +68,176 @@ func get_char(id: String) -> Variant:
 		if c.id == id:
 			return c
 	return null
+
+
+## Items carry a stable `index` (= id) that is never reused, so occupancy keys and references survive edits.
+func get_item(id: int) -> Variant:
+	for it in items:
+		if it.index == id:
+			return it
+	return null
+
+
+# ---- decorating: place / move / remove furniture ------------------------------------------------------------------
+static func _corners(it_x: float, it_z: float, rot: float, hw: float, hd: float) -> Array[Vector2]:
+	var c := cos(rot)
+	var s := sin(rot)
+	var ax := Vector2(c, -s)   # local +x in world (same convention as to_world)
+	var az := Vector2(s, c)    # local +z in world
+	var o := Vector2(it_x, it_z)
+	return [o + ax * hw + az * hd, o - ax * hw + az * hd, o - ax * hw - az * hd, o + ax * hw - az * hd]
+
+
+static func _obb_overlap(a: Array[Vector2], b: Array[Vector2]) -> bool:
+	for poly in [a, b]:
+		for i in 4:
+			var edge: Vector2 = poly[(i + 1) % 4] - poly[i]
+			var axis := Vector2(-edge.y, edge.x).normalized()
+			var a_min := INF; var a_max := -INF; var b_min := INF; var b_max := -INF
+			for p in a:
+				var d := axis.dot(p)
+				a_min = minf(a_min, d); a_max = maxf(a_max, d)
+			for p in b:
+				var d := axis.dot(p)
+				b_min = minf(b_min, d); b_max = maxf(b_max, d)
+			if a_max <= b_min or b_max <= a_min:
+				return false
+	return true
+
+
+## Is this spot a legal place for `def`? Returns {ok, reason}. `ignore_id` is the item being moved (if any).
+## Rules: inside the room, no overlap with other furniture (rugs and wall hangings may overlap), and the house must stay
+## walkable: every usable item's approach point has to remain reachable from the door.
+func can_place(def_id: String, x: float, z: float, rot: float, ignore_id: int = -1) -> Dictionary:
+	if not GameData.furniture.has(def_id):
+		return {"ok": false, "reason": "unknown item"}
+	var def: Dictionary = GameData.furniture[def_id]
+	var room: Dictionary = house.room
+	var hw := float(def.footprint[0]) / 2.0
+	var hd := float(def.footprint[1]) / 2.0
+	var cs := _corners(x, z, rot, hw, hd)
+	var m := 0.14   # wall thickness + a little breathing room
+	for p in cs:
+		if p.x < float(room.x0) + m or p.x > float(room.x1) - m or p.y < float(room.z0) + m or p.y > float(room.z1) - m:
+			return {"ok": false, "reason": "outside the room"}
+	var decor: bool = def.get("floorDecor", false) or def.get("wallMounted", false)
+	if not decor:
+		for o in items:
+			if o.index == ignore_id:
+				continue
+			var od: Dictionary = GameData.furniture[o.def]
+			if od.get("floorDecor", false) or od.get("wallMounted", false):
+				continue
+			var oc := _corners(o.x, o.z, o.get("rot", 0.0), float(od.footprint[0]) / 2.0 + 0.02, float(od.footprint[1]) / 2.0 + 0.02)
+			if _obb_overlap(cs, oc):
+				return {"ok": false, "reason": "overlaps %s" % od.name}
+	# keep the house walkable: simulate the edit and check every usable item is still reachable from the door
+	var trial: Array = []
+	for o in items:
+		if o.index != ignore_id:
+			trial.append(o)
+	trial.append({"def": def_id, "x": x, "z": z, "rot": rot, "index": -99})
+	var tnav := NavGrid.build(house, GameData.furniture, trial)
+	var reach := tnav.reachable_from(_door_point())
+	for o in trial:
+		var od2: Dictionary = GameData.furniture[o.def]
+		if not od2.has("use") or od2.use.has("redirect"):
+			continue
+		var u: Dictionary = od2.use
+		var slot: Dictionary = u.slots[0]
+		var ap := to_world(o, float(u.approach[0]) + (float(slot.x) if u.get("relX", false) else 0.0), float(u.approach[1]))
+		var st: Variant = tnav.nearest_walkable(ap.x, ap.y)
+		if st == null or reach[tnav.cell_z(st.y) * tnav.nx + tnav.cell_x(st.x)] == 0:
+			return {"ok": false, "reason": "blocks the way to %s" % od2.name}
+	return {"ok": true, "reason": ""}
+
+
+func _door_point() -> Vector2:
+	for o in house.openings:
+		if o.wall == "left" and float(o.bottom) == 0.0:
+			return Vector2(float(house.room.x0) - 0.8, float(o.center))
+	return Vector2(float(house.room.x0) - 0.8, 0.0)
+
+
+## Frees anyone using or heading to an item (they stand up where they entered).
+func _evict(item_id: int) -> void:
+	for c in chars:
+		var using: bool = c.use != null and c.use.item.index == item_id
+		var heading: bool = c.pending != null and c.pending.item.index == item_id
+		if not using and not heading:
+			continue
+		if using:
+			Life.end_session(c, self)
+			var ex: Vector2 = c.use.exit
+			c.x = ex.x
+			c.z = ex.y
+			c.y = 0.0
+		_release(c)
+		c.use = null
+		c.pending = null
+		c.tween = null
+		c.path = []
+		c.mode = "idle"
+		c.pose = {"kind": "stand", "anim": "none"}
+		c.activity = ""
+		c.idle_timer = randf_range(1, 3)
+
+
+func rebuild_nav() -> void:
+	nav = NavGrid.build(house, GameData.furniture, items)
+	for c in chars:
+		if c.mode == "walk":
+			c.path = []
+			c.mode = "idle"
+			c.pending = null
+			_release(c)
+		if c.mode == "idle" and not nav.walkable(c.x, c.z):
+			var p: Variant = nav.nearest_walkable(c.x, c.z)
+			if p != null:
+				c.x = p.x
+				c.z = p.y
+
+
+## Edits do NOT validate: call can_place first. Returns the new item's id.
+func add_item(def_id: String, x: float, z: float, rot: float, y: float = 0.0) -> int:
+	var d := {"def": def_id, "x": x, "z": z, "rot": rot, "index": _next_id}
+	if y != 0.0:
+		d.y = y
+	_next_id += 1
+	items.append(d)
+	rebuild_nav()
+	return d.index
+
+
+func move_item(id: int, x: float, z: float, rot: float) -> void:
+	var it: Variant = get_item(id)
+	if it == null:
+		return
+	_evict(id)
+	it.x = x
+	it.z = z
+	it.rot = rot
+	rebuild_nav()
+
+
+func remove_item(id: int) -> void:
+	var it: Variant = get_item(id)
+	if it == null:
+		return
+	_evict(id)
+	items.erase(it)
+	rebuild_nav()
+
+
+## Plain data (no ids) for saving the layout.
+func layout_data() -> Array:
+	var out: Array = []
+	for it in items:
+		var d := {"def": it.def, "x": snappedf(it.x, 0.001), "z": snappedf(it.z, 0.001), "rot": snappedf(it.get("rot", 0.0), 0.0001)}
+		if it.has("y"):
+			d.y = it.y
+		out.append(d)
+	return out
 
 
 func select(id: String) -> void:
@@ -121,7 +292,7 @@ func command_use(c: Dictionary, item_index: int) -> bool:
 
 # ---- internals -------------------------------------------------------------
 func _resolve_use(c: Dictionary, item_index: int) -> Variant:
-	var item: Dictionary = items[item_index]
+	var item: Dictionary = get_item(item_index)
 	var def: Dictionary = GameData.furniture[item.def]
 	if not def.has("use"):
 		return null

@@ -11,7 +11,7 @@ const PICK_HEIGHT := {
 }
 
 var reg: Dictionary
-var items: Array = []          # {index, def, x, z, rot, y, hw, hd, h}
+var items: Array = []          # picking entries: {index, def, x, z, rot, y, hw, hd, h}
 var _flies: Array = []
 var _fly_root: Node3D
 
@@ -25,10 +25,14 @@ class Lcg:
 		return float(s) / 2147483647.0
 
 
-func build(house: Dictionary) -> void:
+var item_nodes: Dictionary = {}   # item id -> Node3D (its meshes, flames and lights live under it)
+
+
+## `p_items` are the simulation's items (each has a stable `index`); defaults to the house's starting layout.
+func build(house: Dictionary, p_items: Array = []) -> void:
 	var b := Builder.new()
 	b.dyn_parent = self
-	reg = b.reg
+	reg = {"lamp_shades": [], "lamp_lights": [], "flames": [], "fire_lights": [], "window_glass": []}
 	var room: Dictionary = house.room
 	var x0: float = room.x0; var x1: float = room.x1; var z0: float = room.z0; var z1: float = room.z1
 	var wall_h: float = room.wallHeight
@@ -49,18 +53,6 @@ func build(house: Dictionary) -> void:
 	b.box(0.24, 0.3, D, Pal.STONE, x1, 0, (z0 + z1) / 2)
 	b.box(0.3, 0.07, D, Pal.STONE_LIGHT, x1, 0.3, (z0 + z1) / 2)
 
-	# furniture (kept merged; picking uses oriented footprint boxes, not meshes)
-	var idx := 0
-	for it in house.items:
-		var def: Dictionary = GameData.furniture[it.def]
-		b.push(Vector3(it.x, it.get("y", 0.0), it.z), it.get("rot", 0.0))
-		Models.build_furniture(b, it.def)
-		b.pop()
-		items.append({"index": idx, "def": it.def, "x": it.x, "z": it.z, "y": it.get("y", 0.0), "rot": it.get("rot", 0.0),
-			"hw": float(def.footprint[0]) / 2.0 + 0.08, "hd": float(def.footprint[1]) / 2.0 + 0.08,
-			"h": PICK_HEIGHT.get(it.def, 1.0)})
-		idx += 1
-
 	# scenery (data-driven so the nav grid and the renderer agree)
 	for sc in house.scenery:
 		b.push(Vector3(sc.x, 0, sc.z), float(sc.x) if sc.type == "flowers" else 0.0, sc.s)
@@ -69,7 +61,73 @@ func build(house: Dictionary) -> void:
 
 	_fence(b)
 	b.commit(self)
+	for k in b.reg:
+		reg[k].append_array(b.reg[k])
 	_fireflies(x0, x1, z0, z1)
+
+	# furniture: one node per item, so decorating can move and remove them
+	var src: Array = p_items
+	if src.is_empty():
+		var idx := 0
+		for it in house.items:
+			var d: Dictionary = it.duplicate()
+			d.index = idx
+			idx += 1
+			src.append(d)
+	for it in src:
+		add_item_node(it)
+
+
+func _item_transform(it: Dictionary) -> Transform3D:
+	return Transform3D(Basis(Vector3.UP, float(it.get("rot", 0.0))), Vector3(it.x, it.get("y", 0.0), it.z))
+
+
+func _pick_entry(it: Dictionary) -> Dictionary:
+	var def: Dictionary = GameData.furniture[it.def]
+	return {"index": it.index, "def": it.def, "x": it.x, "z": it.z, "y": it.get("y", 0.0), "rot": it.get("rot", 0.0),
+		"hw": float(def.footprint[0]) / 2.0 + 0.08, "hd": float(def.footprint[1]) / 2.0 + 0.08, "h": PICK_HEIGHT.get(it.def, 1.0)}
+
+
+func add_item_node(it: Dictionary) -> void:
+	var node := Node3D.new()
+	node.name = "Item%d" % it.index
+	add_child(node)
+	var b := Builder.new()
+	b.dyn_parent = node      # flames / lights / glass are children, so they move with the item
+	Models.build_furniture(b, it.def)
+	b.commit(node)
+	node.transform = _item_transform(it)
+	for k in b.reg:
+		reg[k].append_array(b.reg[k])
+	node.set_meta("reg", b.reg)
+	item_nodes[it.index] = node
+	items.append(_pick_entry(it))
+
+
+func remove_item_node(id: int) -> void:
+	if not item_nodes.has(id):
+		return
+	var node: Node3D = item_nodes[id]
+	var own: Dictionary = node.get_meta("reg")
+	for k in own:
+		for o in own[k]:
+			reg[k].erase(o)
+	node.queue_free()
+	item_nodes.erase(id)
+	for i in items.size():
+		if items[i].index == id:
+			items.remove_at(i)
+			break
+
+
+func move_item_node(it: Dictionary) -> void:
+	if not item_nodes.has(it.index):
+		return
+	(item_nodes[it.index] as Node3D).transform = _item_transform(it)
+	for i in items.size():
+		if items[i].index == it.index:
+			items[i] = _pick_entry(it)
+			break
 
 
 # ---- ground, woods, path, floor ---------------------------------------------------------------------------------

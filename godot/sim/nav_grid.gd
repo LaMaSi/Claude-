@@ -230,7 +230,37 @@ static func _pop(hf: PackedFloat32Array, hi: PackedInt32Array) -> void:
 		k = m
 
 
-static func build(house: Dictionary, furniture: Dictionary) -> NavGrid:
+## Cells reachable from `from` (8-connected, no corner cutting): 1 = reachable.
+func reachable_from(from: Vector2) -> PackedByteArray:
+	var seen := PackedByteArray()
+	seen.resize(nx * nz)
+	var start: Variant = nearest_walkable(from.x, from.y)
+	if start == null:
+		return seen
+	var stack: Array[int] = [cell_z(start.y) * nx + cell_x(start.x)]
+	seen[stack[0]] = 1
+	while not stack.is_empty():
+		var cur: int = stack.pop_back()
+		var cx := cur % nx
+		var cz := cur / nx
+		for dz in range(-1, 2):
+			for dx in range(-1, 2):
+				if dx == 0 and dz == 0:
+					continue
+				var ix := cx + dx
+				var iz := cz + dz
+				if not _ok(ix, iz) or seen[iz * nx + ix] != 0:
+					continue
+				if dx != 0 and dz != 0 and (not _ok(cx + dx, cz) or not _ok(cx, cz + dz)):
+					continue
+				seen[iz * nx + ix] = 1
+				stack.append(iz * nx + ix)
+	return seen
+
+
+static func build(house: Dictionary, furniture: Dictionary, items: Array = []) -> NavGrid:
+	if items.is_empty():
+		items = house.items
 	var nav := NavGrid.new(house.bounds)
 	var room: Dictionary = house.room
 	var x0r: float = room.x0
@@ -251,7 +281,7 @@ static func build(house: Dictionary, furniture: Dictionary) -> NavGrid:
 		rect.call(x0r - t, x0r + t, cur, float(d.center) - float(d.width) / 2)
 		cur = float(d.center) + float(d.width) / 2
 	rect.call(x0r - t, x0r + t, cur, z1r + t)
-	for it in house.items:
+	for it in items:
 		var def: Dictionary = furniture[it.def]
 		if def.get("floorDecor", false) or def.get("wallMounted", false):
 			continue

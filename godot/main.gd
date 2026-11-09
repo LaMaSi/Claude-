@@ -44,12 +44,12 @@ func _ready() -> void:
 	if _args.has("seed"):
 		seed(int(_args.seed))
 
-	sim = Sim.new(GameData.house, GameData.family)
+	sim = Sim.new(GameData.house, GameData.family, Layout.load_items())
 	daynight = DayNight.new()
 	add_child(daynight)
 	world = World.new()
 	add_child(world)
-	world.build(GameData.house)
+	world.build(GameData.house, sim.items)
 
 	baker = FaceBaker.new()
 	add_child(baker)
@@ -167,7 +167,7 @@ func _on_tap(p: Vector2) -> void:
 	# 2) furniture
 	var idx := world.pick_item(camera.project_ray_origin(p), camera.project_ray_normal(p))
 	if idx >= 0:
-		var it: Dictionary = sim.items[idx]
+		var it: Dictionary = sim.get_item(idx)
 		_flash(it.x, it.z, Color("ffd36b") if sim.command_use(sel, idx) else Color("ff7b7b"))   # red: busy / unusable
 		return
 	# 3) ground
