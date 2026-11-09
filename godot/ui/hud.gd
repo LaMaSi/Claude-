@@ -616,13 +616,28 @@ func _build_dock(safe_bottom: float) -> void:
 		prow.add_child(_make_portrait_button(c))
 
 
-func _circle_avatar(id: String, size: float, border: Color, bw: float) -> PanelContainer:
+## A round portrait. Two layers: an unclipped Panel behind it carries the selection glow (a clipped node would cut its own
+## shadow to a square), and the clipped PanelContainer on top holds the picture and the ring.
+func _circle_avatar(id: String, size: float, border: Color, bw: float) -> Control:
+	var holder := Control.new()
+	holder.custom_minimum_size = Vector2.ONE * size * S
+	holder.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var glow := Panel.new()
+	var gsb := _flat(Color(0, 0, 0, 0), Color(0, 0, 0, 0), 0.0, size / 2.0, 0.0)
+	gsb.shadow_size = 0
+	glow.add_theme_stylebox_override("panel", gsb)
+	glow.set_anchors_preset(Control.PRESET_FULL_RECT)
+	glow.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	holder.add_child(glow)
 	var p := PanelContainer.new()
 	var sb := _flat(Color("2a1f17"), border, bw, size / 2.0, 0.0)
 	p.add_theme_stylebox_override("panel", sb)
-	p.custom_minimum_size = Vector2.ONE * size * S
+	p.set_anchors_preset(Control.PRESET_FULL_RECT)
 	p.clip_children = CanvasItem.CLIP_CHILDREN_AND_DRAW
 	p.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	holder.add_child(p)
+	holder.set_meta("ring_sb", sb)
+	holder.set_meta("glow_sb", gsb)
 	var tr := TextureRect.new()
 	tr.texture = portraits.get(id)
 	tr.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
@@ -631,7 +646,7 @@ func _circle_avatar(id: String, size: float, border: Color, bw: float) -> PanelC
 	tr.modulate = Color(1, 1, 1, 0.93)
 	tr.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	p.add_child(tr)
-	return p
+	return holder
 
 
 func _make_portrait_button(c: Dictionary) -> Control:
@@ -733,10 +748,11 @@ func update(dt: float, hour: float) -> void:
 		var c: Dictionary = sim.get_char(id)
 		var pb: Dictionary = port_btns[id]
 		var is_sel: bool = id == sim.selected_id
-		var sb := (pb.avatar as PanelContainer).get_theme_stylebox("panel") as StyleBoxFlat
-		sb.border_color = GOLDHI if is_sel else Color("5b4426")
-		sb.shadow_color = Color(0.94, 0.8, 0.46, 0.65) if is_sel else Color(0, 0, 0, 0)
-		sb.shadow_size = int(14 * S) if is_sel else 0
+		var ring := (pb.avatar as Control).get_meta("ring_sb") as StyleBoxFlat
+		var glow := (pb.avatar as Control).get_meta("glow_sb") as StyleBoxFlat
+		ring.border_color = GOLDHI if is_sel else Color("5b4426")
+		glow.shadow_color = Color(0.94, 0.8, 0.46, 0.65) if is_sel else Color(0, 0, 0, 0)
+		glow.shadow_size = int(14 * S) if is_sel else 0
 		(pb.name as Label).add_theme_color_override("font_color", GOLDHI if is_sel else Color("cdbb90"))
 		var warn := false
 		for n in GameData.needs:

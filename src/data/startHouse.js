@@ -11,8 +11,8 @@ export const startHouse = {
   ],
   items: [
     // sleeping corner
-    { def: 'bed',         x: -2.9, z: -1.85, rot: 0 },
-    { def: 'chest',       x: -2.9, z: -0.4,  rot: 0 },
+    { def: 'bed',         x: -2.9, z: -1.55, rot: 0 }, // headboard stands clear of the window frame and its open shutters
+    { def: 'chest',       x: -2.9, z: 0.0,   rot: 0 },
     { def: 'candlestand', x: -1.5, z: -2.55, rot: 0 },
     { def: 'banner',      x: -3.86, z: -1.7, y: 1.15, rot: Math.PI / 2 },
     // kitchen along the back wall

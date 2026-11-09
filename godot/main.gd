@@ -239,10 +239,13 @@ func _apply_shift(size: float) -> void:
 func _process(delta: float) -> void:
 	_frame += 1
 	var t := Time.get_ticks_msec() / 1000.0
-	if _args.has("focus"):   # dev: close-up on a character
-		var fc: Variant = sim.get_char(_args.focus)
+	if _args.has("focus") or _args.has("at"):   # dev: close-up on a character or a point (--at=x,y,z)
+		var fc: Variant = sim.get_char(_args.focus) if _args.has("focus") else {"x": 0.0, "z": 0.0, "scale": 1.0}
 		if fc != null:
 			var tgt := Vector3(fc.x, 0.8 * fc.scale, fc.z)
+			if _args.has("at"):
+				var p: PackedStringArray = _args.at.split(",")
+				tgt = Vector3(float(p[0]), float(p[1]), float(p[2]))
 			camera.position = tgt + CAM_OFFSET.normalized() * 30.0
 			camera.look_at(tgt, Vector3.UP)
 			camera.size = 17.0 / float(_args.get("zoom", 9))
