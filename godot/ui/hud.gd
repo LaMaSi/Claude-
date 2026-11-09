@@ -63,6 +63,7 @@ var opt_pop: PanelContainer
 var dock_box: VBoxContainer
 var _safe_bottom := 0.0
 var _layout_key := Vector4.ZERO
+var _blockers: Array[Control] = []
 var _px_sw: CheckButton
 var _px_cell := 3
 var _perf_sw: CheckButton
@@ -342,15 +343,18 @@ func _build_top(safe_top: float) -> void:
 	row.alignment = BoxContainer.ALIGNMENT_END
 	box.add_child(row)
 	clock_btn = _pill_button("☾ 21:30")
+	_blockers.append(clock_btn)
 	clock_btn.pressed.connect(func(): time_pop.visible = not time_pop.visible)
 	row.add_child(clock_btn)
 	var opt_btn := _pill_button("")
+	_blockers.append(opt_btn)
 	opt_btn.icon = _icon_tex("gi:cog")
 	opt_btn.add_theme_constant_override("icon_max_width", int(22 * S))
 	opt_btn.add_theme_constant_override("h_separation", 0)
 	opt_btn.pressed.connect(func(): opt_pop.visible = not opt_pop.visible)
 	row.add_child(opt_btn)
 	play_btn = _pill_button("Auto")
+	_blockers.append(play_btn)
 	play_btn.pressed.connect(func():
 		auto_on = not auto_on
 		play_btn.text = "Pause" if auto_on else "Auto"
@@ -363,6 +367,7 @@ func _build_top(safe_top: float) -> void:
 	opt_pop.visible = false
 	opt_pop.custom_minimum_size = Vector2(264 * S, 0)
 	box.add_child(opt_pop)
+	_blockers.append(opt_pop)
 	var ov := _vbox(4)
 	opt_pop.add_child(ov)
 	ov.add_child(_lbl("Options", 17, GOLDHI, true))
@@ -426,6 +431,7 @@ func _build_top(safe_top: float) -> void:
 	time_pop.add_theme_stylebox_override("panel", _wood(14.0))
 	time_pop.visible = false
 	box.add_child(time_pop)
+	_blockers.append(time_pop)
 	var tv := _vbox(4)
 	time_pop.add_child(tv)
 	date_lbl = _lbl("", 14, GOLDHI, true)
@@ -460,11 +466,13 @@ func _build_dock(safe_bottom: float) -> void:
 	status_lbl = _lbl("Tap a portrait", 14, Color("f6ead0"))
 	status_pill.add_child(status_lbl)
 	dock_box.add_child(status_pill)
+	_blockers.append(status_pill)
 
 	panel = PanelContainer.new()
 	panel.add_theme_stylebox_override("panel", _wood(16.0))
 	panel.size_flags_horizontal = Control.SIZE_FILL
 	dock_box.add_child(panel)
+	_blockers.append(panel)
 	var pv := _vbox(0)
 	panel.add_child(pv)
 	var head := _hbox(10)
@@ -601,6 +609,7 @@ func _build_dock(safe_bottom: float) -> void:
 	dock.add_theme_stylebox_override("panel", dsb)
 	dock.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	dock_box.add_child(dock)
+	_blockers.append(dock)
 	var prow := _hbox(12)
 	dock.add_child(prow)
 	for c in sim.chars:
@@ -1096,3 +1105,11 @@ func set_perf_ui(on: bool) -> void:
 
 func set_perf_text(t: String) -> void:
 	perf_lbl.text = t
+
+
+## True when a screen point is over an interactive piece of UI (the world must not react to that touch).
+func blocks(p: Vector2) -> bool:
+	for c in _blockers:
+		if c.is_visible_in_tree() and c.get_global_rect().has_point(p):
+			return true
+	return false

@@ -13,8 +13,10 @@ const GARMENT := {   # [radius, y] profiles (top -> hem); lathe, scaled by build
 # Rolled collar that grows out of the shoulders and wraps the neck
 const COLLAR := [[0.17, 0.95], [0.15, 0.98], [0.12, 1.008], [0.095, 1.03], [0.075, 1.045], [0.06, 1.047], [0.05, 1.035], [0.05, 0.98]]
 
+const LOD_LOW := 0.4
+
 static var _garment_mat: StandardMaterial3D
-static var _collar_mesh: ArrayMesh
+static var _collar_meshes: Dictionary = {}
 static var _garment_cache: Dictionary = {}
 
 
@@ -89,26 +91,26 @@ static func _paint(L: Dictionary, K: Dictionary, y: float, a: float, th: float) 
 
 
 static func _garment_mesh(L: Dictionary, key: String, K: Dictionary) -> ArrayMesh:
-	var ck := JSON.stringify([key, L.outfit, L.shirt, L.get("trim"), L.get("cloak"), L.get("apron")])
+	var ck := JSON.stringify([key, L.outfit, L.shirt, L.get("trim"), L.get("cloak"), L.get("apron"), Geo.lod])
 	if _garment_cache.has(ck):
 		return _garment_cache[ck]
 	var pts: Array = []
 	for p in GARMENT[key]:
 		pts.append(Vector2(p[0], p[1]))
-	var crv := Geo.spline2(pts, 64)
+	var crv := Geo.spline2(pts, Geo.q(64, 14))
 	crv.reverse()   # bottom -> top for outward faces
-	var mesh := Geo.lathe(crv, 56, func(_j: int, y: float, th: float) -> Color: return _paint(L, K, y, absf(th), th))
+	var mesh := Geo.lathe(crv, Geo.q(56, 14), func(_j: int, y: float, th: float) -> Color: return _paint(L, K, y, absf(th), th))
 	_garment_cache[ck] = mesh
 	return mesh
 
 
 static func _collar_mesh_get() -> ArrayMesh:
-	if _collar_mesh == null:
+	if not _collar_meshes.has(Geo.lod):
 		var pts: Array = []
 		for p in COLLAR:
 			pts.append(Vector2(p[0], p[1]))
-		_collar_mesh = Geo.lathe(Geo.spline2(pts, 24), 28)
-	return _collar_mesh
+		_collar_meshes[Geo.lod] = Geo.lathe(Geo.spline2(pts, Geo.q(24, 8)), Geo.q(28, 10))
+	return _collar_meshes[Geo.lod]
 
 
 static func _lin(h: int) -> Color:
@@ -144,11 +146,6 @@ static func build_ray(cfg: Dictionary) -> Dictionary:
 		key = "bell"
 	elif outfit == "robe" or outfit == "noble":
 		key = "long"
-	var gm := MeshInstance3D.new()
-	gm.mesh = _garment_mesh(L, key, K)
-	gm.material_override = _gmat()
-	gm.scale = Vector3(g, 1.0, 0.82)
-	body.add_child(gm)
 	var collar_c := Pal.CREAM
 	match outfit:
 		"knight": collar_c = 0x6f7886
@@ -157,32 +154,68 @@ static func build_ray(cfg: Dictionary) -> Dictionary:
 		"robe": collar_c = Geo.tint(shirt, -0.2)
 		"noble": collar_c = trim
 		"smith": collar_c = shirt
-	var cm := MeshInstance3D.new()
-	cm.mesh = _collar_mesh_get()
-	cm.material_override = Prim.smooth_mat(collar_c)
-	cm.scale = Vector3(g * 1.2, 1.0, 0.7 * 1.2)
-	cm.position.y = -0.02
-	body.add_child(cm)
-
-	for pair in [["armL", -1.0], ["armR", 1.0]]:   # floating sphere hands (the arm group is just the swing pivot)
-		var sx: float = pair[1]
+	var arms: Array = []
+	for pair in [["armL", -1.0], ["armR", 1.0]]:   # the arm group is just the swing pivot for the floating hand
 		var arm := Node3D.new()
-		arm.position = Vector3(sx * 0.3 * g, 0.82, 0)
-		arm.rotation.z = sx * 0.08
+		arm.position = Vector3(float(pair[1]) * 0.3 * g, 0.82, 0)
+		arm.rotation.z = float(pair[1]) * 0.08
 		body.add_child(arm)
-		Prim.ball(arm, 0.08, skin, sx * 0.07, -0.34, 0.03, 1.0, 1.0, 1.0, 12)
 		parts[pair[0]] = arm
+		arms.append(arm)
 	var hs := head_scale * 1.1
 	var hy := 1.14 + (Face.head_bottom(L) - 0.2) * 0.8
 	var head := Node3D.new()
 	head.position = Vector3(0, hy, 0)
 	head.scale = Vector3.ONE * hs
 	body.add_child(head)
-	Face.build(head, L)
-	Hair.build(head, L)
-	_build_headwear(head, L)
 	parts.head = head
-	return {"root": outer, "pivot": pivot, "parts": parts}
+
+	# Two levels of detail built from the same description; the view shows one at a time (see set_lod). Level 1 is
+	# what you see at normal zoom, where a character is only a few dozen pixels tall.
+	var lod_nodes: Array = [[], []]
+	for lv in 2:
+		Geo.lod = 1.0 if lv == 0 else LOD_LOW
+		var low := lv == 1
+		var before_body := body.get_child_count()
+		var before_head := head.get_child_count()
+		var before_arms := [arms[0].get_child_count(), arms[1].get_child_count()]
+		var gm := MeshInstance3D.new()
+		gm.mesh = _garment_mesh(L, key, K)
+		gm.material_override = _gmat()
+		gm.scale = Vector3(g, 1.0, 0.82)
+		body.add_child(gm)
+		var cm := MeshInstance3D.new()
+		cm.mesh = _collar_mesh_get()
+		cm.material_override = Prim.smooth_mat(collar_c)
+		cm.scale = Vector3(g * 1.2, 1.0, 0.7 * 1.2)
+		cm.position.y = -0.02
+		body.add_child(cm)
+		for i in 2:
+			var sx := -1.0 if i == 0 else 1.0
+			Prim.ball(arms[i], 0.08, skin, sx * 0.07, -0.34, 0.03, 1.0, 1.0, 1.0, Geo.q(12, 6))
+		Face.build(head, L, low)
+		Hair.build(head, L)
+		_build_headwear(head, L)
+		for i in range(before_body, body.get_child_count()):
+			if body.get_child(i) != head:
+				lod_nodes[lv].append(body.get_child(i))
+		for i in range(before_head, head.get_child_count()):
+			lod_nodes[lv].append(head.get_child(i))
+		for k in 2:
+			for i in range(before_arms[k], arms[k].get_child_count()):
+				lod_nodes[lv].append(arms[k].get_child(i))
+	Geo.lod = 1.0
+	var person := {"root": outer, "pivot": pivot, "parts": parts, "lod_nodes": lod_nodes, "lod": 0}
+	set_lod(person, 0)
+	return person
+
+
+## Show one level of detail (0 = full, 1 = cheap) and hide the other.
+static func set_lod(person: Dictionary, level: int) -> void:
+	person.lod = level
+	for lv in person.lod_nodes.size():
+		for n in person.lod_nodes[lv]:
+			(n as Node3D).visible = lv == level
 
 
 static func _build_headwear(head: Node3D, L: Dictionary) -> void:

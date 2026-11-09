@@ -7,6 +7,15 @@ const KEYS := ["legL", "legR", "armL", "armR", "armZ", "lie", "bob", "headX", "r
 var sim: Sim
 var views: Dictionary = {}
 var ring: MeshInstance3D
+var lod := 0
+
+
+func set_lod(level: int) -> void:
+	if level == lod:
+		return
+	lod = level
+	for id in views:
+		People.set_lod(views[id], level)
 
 
 func setup(p_sim: Sim) -> void:
@@ -141,7 +150,9 @@ func update(dt: float, t: float, selected_id: String) -> void:
 					v.blink_at = 2.0 + randf() * 4.0
 			if ex != v.expr:
 				v.expr = ex
-				(parts.head.get_meta("skull") as MeshInstance3D).material_override = Face.head_material(parts.head.get_meta("look"), ex)
+				var mat := Face.head_material(parts.head.get_meta("look"), ex)
+				for sk in parts.head.get_meta("skulls"):
+					(sk as MeshInstance3D).material_override = mat
 		v.pivot.rotation.x = -PI / 2.0 * cur.lie
 		v.root.position = Vector3(c.x, c.y, c.z)
 		v.root.rotation.y = c.yaw

@@ -202,10 +202,10 @@ static func bookshelf(b: Builder) -> void:
 static func rug(b: Builder) -> void:
 	var prev := b.shadow
 	b.shadow = false
-	b.cyl(1.2, 1.2, 0.025, Pal.WOOL, 0, 0, 0, 24)
+	b.cyl(1.2, 1.2, 0.02, Pal.WOOL, 0, 0, 0, 24)       # layers are >= 10 mm apart so depth never fights
 	b.cyl(1.0, 1.0, 0.03, Pal.WOOL_OCHRE, 0, 0, 0, 24)
-	b.cyl(0.8, 0.8, 0.035, Pal.WOOL_BLUE, 0, 0, 0, 24)
-	b.cyl(0.45, 0.45, 0.04, Pal.WOOL, 0, 0, 0, 24)
+	b.cyl(0.8, 0.8, 0.04, Pal.WOOL_BLUE, 0, 0, 0, 24)
+	b.cyl(0.45, 0.45, 0.05, Pal.WOOL, 0, 0, 0, 24)
 	b.shadow = prev
 
 

@@ -61,8 +61,8 @@ static func _grv(fn: Variant, az: float, u: float) -> float:
 static func shell(o: Dictionary) -> ArrayMesh:
 	var rx: float = o.rx; var ry: float = o.ry; var rz: float = o.rz
 	var cy: float = o.get("cy", 0.0)
-	var rows: int = o.get("rows", 24)
-	var cols: int = o.get("cols", 60)
+	var rows: int = o.get("rows", Geo.q(24, 10))
+	var cols: int = o.get("cols", Geo.q(60, 24))
 	var flare: float = o.get("flare", 0.0)
 	var curl: float = o.get("curl", 0.0)
 	var y_end: Callable = o.yEnd
@@ -152,8 +152,8 @@ static func shell(o: Dictionary) -> ArrayMesh:
 
 # ---- grooved blob (buns) ------------------------------------------------------------------------------------------
 static func blob(r: float, color: int, sx: float = 1.0, sy: float = 1.0, sz: float = 1.0) -> ArrayMesh:
-	var nu := 30
-	var nv := 22
+	var nu := Geo.q(30, 12)
+	var nv := Geo.q(22, 8)
 	var pos := PackedVector3Array()
 	var cols := PackedColorArray()
 	var idx := PackedInt32Array()
@@ -190,14 +190,14 @@ static func blob(r: float, color: int, sx: float = 1.0, sy: float = 1.0, sz: flo
 
 # ---- spikes: a flat pointed blade that sweeps back and curls, rooted inside the scalp ------------------------------
 static func _spike_mesh(bend: float, flat: float) -> ArrayMesh:
-	var key := "%s|%s" % [bend, flat]
+	var key := "%s|%s|%s" % [bend, flat, Geo.lod]
 	if _spike_geo.has(key):
 		return _spike_geo[key]
 	var profile: Array = []
 	for i in 15:
 		var t := float(i) / 14.0
 		profile.append(Vector2(maxf(0.0005, pow(1.0 - t, 0.85) * (1.0 + 0.25 * sin(t * PI))), t - 0.12))
-	var seg := 12
+	var seg := Geo.q(12, 6)
 	var np := profile.size()
 	var pos := PackedVector3Array()
 	for i in seg + 1:

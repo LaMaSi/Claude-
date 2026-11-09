@@ -4,6 +4,14 @@ extends RefCounted
 ## smooth-normal ArrayMesh builder. Triangles are authored counter-clockwise-outward like three.js; `build` emits
 ## them clockwise (Godot's front-face winding).
 
+## Detail multiplier for generated meshes: 1.0 = full, <1 = a cheaper level of detail (see People.build_ray).
+static var lod := 1.0
+
+
+static func q(n: int, min_n: int = 4) -> int:
+	return maxi(min_n, roundi(n * lod))
+
+
 # ---- maths ------------------------------------------------------------------------------------------------------
 ## three.js MathUtils.smoothstep(x, min, max) (note: Godot's smoothstep takes the edges first)
 static func ss(x: float, a: float, b: float) -> float:
@@ -201,7 +209,9 @@ static func _lathe_ref(points: Array) -> Vector3:
 
 ## Tube along a Catmull-Rom path with a rippled / twisted circular section (hair braids, ponytails, hat tails...).
 ## Returns an ArrayMesh with vertex colours = linear(color) * shade.
-static func tube(pts_in: Array, r0: float, r1: float, color: int, twist: float = 0.0, rip: float = 0.08, seg: int = 12, n: int = 28) -> ArrayMesh:
+static func tube(pts_in: Array, r0: float, r1: float, color: int, twist: float = 0.0, rip: float = 0.08, seg_in: int = 12, n_in: int = 28) -> ArrayMesh:
+	var seg := q(seg_in, 5)
+	var n := q(n_in, 10)
 	var pts: Array = []
 	for p in pts_in:
 		pts.append(p if p is Vector3 else Vector3(p[0], p[1], p[2]))

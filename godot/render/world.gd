@@ -140,7 +140,7 @@ func _ground_and_woods(b: Builder, house: Dictionary) -> void:
 		var r := 1.2 + g.next() * 3.2
 		var px := (g.next() - 0.5) * 70.0
 		var pz := (g.next() - 0.5) * 70.0
-		b.disc(r, 9, patch_cols[i % 3], px, -0.035 + (i % 3) * 0.002, pz)
+		b.disc(r, 9, patch_cols[i % 3], px, -0.03 + (i % 3) * 0.008, pz)
 	var yard := {"x0": -7.9, "x1": 7.9, "z0": -6.5, "z1": 6.2}
 	var n := 0
 	while n < 90:
@@ -219,7 +219,7 @@ func _flag_texture() -> ImageTexture:
 func _floor(b: Builder, x0: float, x1: float, z0: float, z1: float) -> void:
 	var W := x1 - x0
 	var D := z1 - z0
-	b.box(W + 0.24, 0.2, D + 0.24, Pal.STONE_DARK, (x0 + x1) / 2, -0.21, (z0 + z1) / 2)
+	b.box(W + 0.24, 0.2, D + 0.24, Pal.STONE_DARK, (x0 + x1) / 2, -0.22, (z0 + z1) / 2)
 	var plane := PlaneMesh.new()
 	plane.size = Vector2(W + 0.24, D + 0.24)
 	var m := StandardMaterial3D.new()
@@ -231,7 +231,7 @@ func _floor(b: Builder, x0: float, x1: float, z0: float, z1: float) -> void:
 	var mi := MeshInstance3D.new()
 	mi.mesh = plane
 	mi.material_override = m
-	mi.position = Vector3((x0 + x1) / 2, -0.005, (z0 + z1) / 2)
+	mi.position = Vector3((x0 + x1) / 2, 0.0, (z0 + z1) / 2)
 	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	add_child(mi)
 

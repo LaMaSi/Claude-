@@ -70,8 +70,8 @@ func _ready() -> void:
 	camera = Camera3D.new()
 	camera.projection = Camera3D.PROJECTION_ORTHOGONAL
 	camera.keep_aspect = Camera3D.KEEP_HEIGHT
-	camera.near = 0.1
-	camera.far = 200.0
+	camera.near = 4.0     # tight depth range = more precision (the camera sits ~32 units from the scene)
+	camera.far = 140.0
 	add_child(camera)
 	rig = CamRig.new()
 	add_child(rig)
@@ -111,6 +111,7 @@ func _boot_ui() -> void:
 	hud = Hud.new()
 	add_child(hud)
 	hud.setup(sim, portraits.textures)
+	rig.ui_blocks = hud.blocks
 	hud.portrait_pressed.connect(func(id: String): _select(id, true))
 	hud.hour_changed.connect(func(h: float): hour = h)
 	hud.auto_toggled.connect(func(on: bool): auto_time = on)
@@ -248,6 +249,11 @@ func _process(delta: float) -> void:
 			camera.v_offset = 0.0
 	elif _ready_ui:
 		rig.update(delta)
+		# detail by zoom (hysteresis so it never flickers): full detail only when a character is large on screen
+		if view.lod == 1 and rig.zoom > 2.3:
+			view.set_lod(0)
+		elif view.lod == 0 and rig.zoom < 1.9:
+			view.set_lod(1)
 		var dock_h := hud.dock_height() if hud != null else 0.0
 		var target_shift := (maxf(UI_BOTTOM * Hud.S, dock_h + 14.0 * Hud.S) - UI_TOP * Hud.S) / 2.0
 		_shift += (target_shift - _shift) * (1.0 - exp(-delta * 9.0))
@@ -303,6 +309,20 @@ func _process(delta: float) -> void:
 			Performance.get_monitor(Performance.RENDER_TOTAL_OBJECTS_IN_FRAME), Performance.get_monitor(Performance.OBJECT_NODE_COUNT),
 			Performance.get_monitor(Performance.TIME_PROCESS) * 1000.0, Performance.get_monitor(Performance.TIME_PROCESS) * 1000.0,
 			Performance.get_monitor(Performance.RENDER_VIDEO_MEM_USED) / 1048576.0])
+	if _args.has("touchtest") and _ready_ui and _frame == 40:
+		_touch_at(hud.clock_btn.get_global_rect().get_center())
+	if _args.has("touchtest") and _ready_ui and _frame == 50:
+		print("TOUCHTEST clock popup visible=%s (expect true)" % hud.time_pop.visible)
+		var before: String = sim.selected_id
+		var pr: Control = hud.port_btns["maya"].avatar
+		_touch_at(pr.get_global_rect().get_center())
+	if _args.has("touchtest") and _ready_ui and _frame == 60:
+		print("TOUCHTEST portrait tap: selected=%s panel_open=%s (expect maya, true)" % [sim.selected_id, hud.open])
+		# a tap on empty world must still reach the game: tap Robin
+		var rb: Dictionary = sim.get_char("robin")
+		_touch_at(camera.unproject_position(Vector3(rb.x, 0.75 * rb.scale, rb.z)))
+	if _args.has("touchtest") and _ready_ui and _frame == 70:
+		print("TOUCHTEST world tap: selected=%s (expect robin)" % sim.selected_id)
 	if _args.has("taptest") and _ready_ui and _frame == 40:
 		var sam: Dictionary = sim.get_char("sam")
 		var log := []
@@ -332,6 +352,8 @@ func _process(delta: float) -> void:
 
 func _tris(n: Node) -> int:
 	var total := 0
+	if n is Node3D and not (n as Node3D).visible:
+		return 0
 	if n is MeshInstance3D and (n as MeshInstance3D).mesh != null:
 		var m := (n as MeshInstance3D).mesh
 		if m is ArrayMesh:
@@ -364,3 +386,17 @@ func _adapt_quality(delta: float) -> void:
 			vp.scaling_3d_scale = maxf(0.5, vp.scaling_3d_scale * 0.8)
 			RenderingServer.directional_shadow_atlas_set_size(1024, true)
 		print("quality -> level ", _quality)
+
+
+## Dev: push a real touch press + release through the input system (exercises GUI, emulation and the camera rig).
+func _touch_at(p: Vector2) -> void:
+	var down := InputEventScreenTouch.new()
+	down.index = 0
+	down.position = p
+	down.pressed = true
+	Input.parse_input_event(down)
+	var up := InputEventScreenTouch.new()
+	up.index = 0
+	up.position = p
+	up.pressed = false
+	get_tree().create_timer(0.05).timeout.connect(func(): Input.parse_input_event(up))

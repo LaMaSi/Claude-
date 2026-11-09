@@ -4,7 +4,8 @@ extends RefCounted
 ## Ported from src/render/headwear.js.
 
 
-static func _lathe_hat(pts: Array, color: int, band_color: int = -1, band_y: Array = [0.0, 0.0], bend: float = 0.0, seg: int = 40) -> ArrayMesh:
+static func _lathe_hat(pts: Array, color: int, band_color: int = -1, band_y: Array = [0.0, 0.0], bend: float = 0.0, seg_in: int = 40) -> ArrayMesh:
+	var seg := Geo.q(seg_in, 14)
 	var top := -INF
 	var bottom := INF
 	for p in pts:

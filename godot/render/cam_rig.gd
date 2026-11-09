@@ -18,6 +18,8 @@ var goal_zoom := 1.0
 var focusing := false
 var base_size := 17.0
 var tap_slop := 27.0       # px of movement before a touch counts as a drag
+var ui_blocks: Callable        # (Vector2) -> bool: true when a touch lands on UI
+var _ignored: Dictionary = {}
 var _pts: Dictionary = {}
 var _tap: Variant = null
 var _last_dist := 0.0
@@ -103,6 +105,12 @@ func _dist() -> float:
 func _unhandled_input(e: InputEvent) -> void:
 	if e is InputEventScreenTouch:
 		var t := e as InputEventScreenTouch
+		if t.pressed and ui_blocks.is_valid() and ui_blocks.call(t.position):
+			_ignored[t.index] = true   # a button/panel owns this finger
+			return
+		if not t.pressed and _ignored.has(t.index):
+			_ignored.erase(t.index)
+			return
 		if t.pressed:
 			_pts[t.index] = t.position
 			focusing = false
@@ -121,7 +129,7 @@ func _unhandled_input(e: InputEvent) -> void:
 				_last_dist = 0.0
 	elif e is InputEventScreenDrag:
 		var d := e as InputEventScreenDrag
-		if not _pts.has(d.index):
+		if _ignored.has(d.index) or not _pts.has(d.index):
 			return
 		var prev: Vector2 = _pts[d.index]
 		_pts[d.index] = d.position

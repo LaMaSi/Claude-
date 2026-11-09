@@ -70,12 +70,12 @@ static func head_mesh(L: Dictionary) -> ArrayMesh:
 	var brow: float = L.get("brow", 0.0)
 	var hw: float = L.headW
 	var hh: float = L.headH
-	var key := "%s|%s|%s|%s|%s|%s" % [hw, hh, shape, chin, cheek, brow]
+	var key := "%s|%s|%s|%s|%s|%s|%s" % [hw, hh, shape, chin, cheek, brow, Geo.lod]
 	if _geo_cache.has(key):
 		return _geo_cache[key]
 	var R := HEAD_R
-	var WS := 32
-	var HS := 24
+	var WS := Geo.q(32, 12)
+	var HS := Geo.q(24, 8)
 	var pos := PackedVector3Array()
 	var nrm := PackedVector3Array()
 	var uvs := PackedVector2Array()
@@ -168,7 +168,8 @@ static func z_at(L: Dictionary) -> Callable:
 		return sqrt(maxf(0.0004, HEAD_R * HEAD_R - (x / hw) * (x / hw) - (y / hh) * (y / hh)))
 
 
-static func build(head: Node3D, L: Dictionary) -> void:
+## `low` = cheap level of detail: skips ears, nose and accessories (a few pixels at that size).
+static func build(head: Node3D, L: Dictionary, low: bool = false) -> void:
 	var skin: int = L.skin
 	var hw: float = L.headW
 	var hh: float = L.headH
@@ -183,11 +184,14 @@ static func build(head: Node3D, L: Dictionary) -> void:
 	skull.material_override = head_material(L, "neutral")
 	head.add_child(skull)
 	head.set_meta("skull", skull)   # so the animation layer can swap expressions
+	var skulls: Array = head.get_meta("skulls", [])
+	skulls.append(skull)
+	head.set_meta("skulls", skulls)
 	head.set_meta("look", L)
 
 	# ears: a flattened shell with a darker inner hollow, set just behind the centre line of the head
 	var ears: String = L.get("ears", "round")
-	if ears != "none":
+	if ears != "none" and not low:
 		for s in [-1.0, 1.0]:
 			var ear_c := Geo.tint(skin, -0.06)
 			var inner := Geo.tint(skin, -0.22)
@@ -213,7 +217,7 @@ static func build(head: Node3D, L: Dictionary) -> void:
 		if tip > 0.0:
 			var t := Prim.ell(head, w * 0.9, tip, d * 0.8, nc, 0.0, y - h * 0.42, nz + d * 0.62, 14)
 			t.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	match L.nose:
+	match "none" if low else L.nose:
 		"button": nose.call(0.05, 0.044, 0.046, -0.042)
 		"big": nose.call(0.085, 0.07, 0.07, -0.046)
 		"long": nose.call(0.05, 0.115, 0.06, -0.06, 0.12)
@@ -222,7 +226,7 @@ static func build(head: Node3D, L: Dictionary) -> void:
 	FacialHair.build(head, L, zat)
 
 	# accessories
-	for a in L.get("accessories", []):
+	for a in ([] if low else L.get("accessories", [])):
 		if a == "glasses":
 			for s in [-1.0, 1.0]:
 				var r := Prim.torus(head, 0.048, 0.007, 0x6b5a48, 0, 0, 0)
